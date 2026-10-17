@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   release:
+    # Only main is published, also when started by hand (a dispatch from another branch would release unmerged notes).
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,7 +41,7 @@ jobs:
         run: |
           tag="kf-$(date -u +%Y.%m.%d)-${{ github.run_number }}"
           gh release create "$tag" dist/bundle.tgz dist/graph.json dist/graph.graphml dist/report.md \
-            --title "$tag" --notes-file dist/report.md --latest
+            --title "$tag" --notes-file dist/report.md --latest --target "$GITHUB_SHA"
         env: { GH_TOKEN: "${{ github.token }}" }
       - name: Rebuild the site
         run: |

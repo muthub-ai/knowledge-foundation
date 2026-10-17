@@ -89,6 +89,8 @@ def validate(bundle: Path, cfg: Config) -> list[Problem]:
                 problems.append(Problem("links", doc.rel, f"link to missing {link}"))
 
         for rel in fm.get("relations") or []:
+            if not isinstance(rel, dict):  # the schema check reports the shape; don't crash on it here
+                continue
             target = okf.resolve_link(bundle, doc.rel, str(rel.get("target", "")))
             if target not in existing:
                 problems.append(Problem("relations", doc.rel, f"{rel.get('type')} targets missing {rel.get('target')}"))

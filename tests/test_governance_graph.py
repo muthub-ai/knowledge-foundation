@@ -172,3 +172,21 @@ class RepositoryBundleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExtractorStartTest(unittest.TestCase):
+    def test_semantica_failing_to_start_is_unavailable_not_a_crash(self):
+        import sys, types
+        from kb.extractors import semantica_adapter
+        class Broken:
+            def __init__(self, **kw):
+                raise RuntimeError("no API key")
+        fake = types.ModuleType("semantica"); kg = types.ModuleType("semantica.kg"); kg.GraphBuilder = Broken
+        with unittest.mock.patch.dict(sys.modules, {"semantica": fake, "semantica.kg": kg}):
+            with self.assertRaises(ExtractorUnavailable):
+                semantica_adapter._load_builder()
+
+    def test_non_ascii_labels_get_distinct_ids(self):
+        from kb.graph import _slug
+        self.assertNotEqual(_slug("数据"), _slug("治理"))
+        self.assertEqual(_slug("Model Context Protocol"), "model-context-protocol")

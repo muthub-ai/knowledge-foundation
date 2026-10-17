@@ -9,6 +9,7 @@ Outputs: graph.json (schemas/graph.schema.json), graph.graphml (Gephi and networ
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime, timezone
@@ -31,7 +32,9 @@ def page_url(rel: str) -> str:
 
 
 def _slug(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "entity"
+    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+    # A label with no ASCII letters or digits still gets its own id, not a shared "entity".
+    return s or "entity-" + hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
 
 
 def _day(ts: Any) -> str:
@@ -90,6 +93,8 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
                            status="stable", updated=_day(rfm.get("published_at")), tags=[])
             edge(n.rel, raw.rel, "draws_on", "source", str(s.get("id")))
         for r in fm.get("relations") or []:
+            if not isinstance(r, dict):
+                continue
             target = okf.resolve_link(bundle, n.rel, str(r.get("target", "")))
             if target in note_ids:
                 if G.has_edge(n.rel, target):

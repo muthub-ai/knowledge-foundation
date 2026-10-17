@@ -84,8 +84,10 @@ lint, consolidation and stale-note findings, and a pull request when there are m
 4. Branch protection on `main`: require a pull request and the checks **unit tests** and **bundle rules**. Require
    **1 approving review** once pull requests come from the App: GitHub does not let you approve a pull request opened
    under your own account, and the approve workflow stamps notes only when you approve. Leave "Dismiss stale pull
-   request approvals" off (the stamp commit would dismiss your approval), block force pushes, and include
-   administrators. This protection is what keeps automated work off `main`; set it before enabling the ingest and
+   request approvals" off (the stamp commit would dismiss your approval), turn on "Require review from Code Owners"
+   (`.github/CODEOWNERS`), block force pushes, and include administrators. Because stale approvals stay, check
+   that nothing was pushed after your approval before you merge; the approve workflow stamps only the exact commit
+   you approved, and stamps nothing if the branch has moved on. This protection is what keeps automated work off `main`; set it before enabling the ingest and
    weekly workflows.
 
 ## The graph
@@ -101,10 +103,12 @@ one-function adapter (`tools/kb/extractors/semantica_adapter.py`) and adds machi
 The `semantica canary` jobs in `tests.yml` run it against the real library on every pull request and report what it
 found (in the job's annotations). What they showed in October 2026, on the 51 seeded notes:
 
-- It runs: 56 entities, 133 mention edges, no note failing.
+- It runs, on every note, with no failures.
 - The `pattern` and `ml` methods give the same result: without a spaCy model installed, `ml` falls back to patterns.
-- The quality is low: the most mentioned "entities" were years and section headings. The adapter now drops numbers,
-  dates and headings; the canary lists every entity it keeps, so you can judge.
+- Unfiltered, the quality is low: 56 "entities", led by years and section headings. The adapter now drops numbers,
+  dates, headings and spans that run across lines, which leaves 19 entities and 43 mention edges. Most are real
+  (The Model Context Protocol, Open Knowledge Format, Google Cloud), but some are still fragments ("In June",
+  "Enterprise Generative"), so the layer stays off. The canary lists every entity it keeps, so you can judge.
 - Worth trying next: the `llm` method (`SEMANTICA_NER_METHOD=llm`, provider Anthropic, `claude-haiku-5-5`), which needs
   `ANTHROPIC_API_KEY`. Turn the layer on (`GRAPH_EXTRACTOR=semantica`) only after the canary's entity list looks useful.
 

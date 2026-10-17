@@ -59,7 +59,10 @@ def _load_builder() -> Any:
         kwargs["provider"] = os.environ["SEMANTICA_PROVIDER"]
     if os.environ.get("SEMANTICA_MODEL"):
         kwargs["llm_model"] = os.environ["SEMANTICA_MODEL"]
-    return GraphBuilder(**kwargs)
+    try:
+        return GraphBuilder(**kwargs)
+    except Exception as e:  # e.g. the llm method without an API key: publish the deterministic graph instead
+        raise ExtractorUnavailable(f"semantica could not start: {e}") from e
 
 
 def _label(e: Any) -> str:

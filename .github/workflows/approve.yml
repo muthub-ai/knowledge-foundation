@@ -20,26 +20,42 @@ jobs:
         with:
           app-id: ${{ vars.KF_APP_ID }}
           private-key: ${{ secrets.KF_APP_PRIVATE_KEY }}
+      # The stamping code comes from main, never from the pull request: the PR's files are only data here, so nothing
+      # the PR changed runs with the App's write token.
+      - uses: actions/checkout@v4
+        with: { path: base, ref: "${{ github.event.pull_request.base.ref }}", persist-credentials: false }
+      # Exactly the commit Muthu approved. If the branch has moved on since, nothing is stamped: approve again.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          path: pr
+          ref: ${{ github.event.review.commit_id }}
           token: ${{ steps.app.outputs.token }}
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12", cache: pip }
-      - run: pip install -r requirements.txt
-      - name: Stamp the notes this pull request changed
+      - name: The approval is for the pull request's current head
+        env: { APPROVED: "${{ github.event.review.commit_id }}", HEAD_SHA: "${{ github.event.pull_request.head.sha }}" }
         run: |
-          git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD" -- wiki/ \
+          if [ "$APPROVED" != "$HEAD_SHA" ]; then
+            echo "::error::The approval was for $APPROVED but the branch is now at $HEAD_SHA. Approve the latest commit to stamp it."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: base/requirements.txt }
+      - run: pip install -r base/requirements.txt
+      - name: Stamp the notes this pull request changed
+        env: { BASE_REF: "${{ github.event.pull_request.base.ref }}", AT: "${{ github.event.review.submitted_at }}" }
+        run: |
+          git -C pr diff --name-only "origin/$BASE_REF...HEAD" -- wiki/ \
             | grep -v -e '^wiki/raw/' -e '/index.md$' -e '^wiki/log.md$' > changed.txt || true
           if [ -s changed.txt ]; then
-            PYTHONPATH=tools python -m kb stamp --by human:muthu --at "${{ github.event.review.submitted_at }}" $(cat changed.txt)
+            (cd base && PYTHONPATH=tools python -m kb --bundle ../pr/wiki stamp --by human:muthu --at "$AT" $(cat ../changed.txt))
           fi
           rm -f changed.txt
       - name: Commit the stamp
+        working-directory: pr
+        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}" }
         run: |
           if git diff --quiet; then echo "nothing to stamp"; exit 0; fi
           git config user.name "knowledge-foundation[bot]"
           git config user.email "knowledge-foundation[bot]@users.noreply.github.com"
           git commit -am "Stamp verification: approved by Muthu"
-          git push
+          git push origin "HEAD:refs/heads/$HEAD_REF"
