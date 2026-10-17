@@ -67,3 +67,18 @@ jobs:
       - name: Adapter against the real library, local extraction (no API key)
         run: bash .github/ci-run.sh "semantica canary" python -m kb graph --out dist --extractor semantica
         env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: pattern, SEMANTICA_RELATION_METHOD: pattern }
+      # A green build alone proves nothing: the graph falls back to the deterministic layer when Semantica cannot run.
+      # Report what Semantica actually did (as an annotation, readable from the Checks API), and fail if it did not run.
+      - name: Semantica actually ran
+        run: |
+          python - <<'PY'
+          import json, re, sys
+          rep = open("dist/report.md", encoding="utf-8").read()
+          sem = rep.split("## Semantic layer", 1)[1].strip()
+          g = json.load(open("dist/graph.json", encoding="utf-8"))
+          ext = sum(1 for e in g["edges"] if e["origin"] == "extracted")
+          failed = len(re.findall(r"extraction failed", sem))
+          print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}")
+          ok = "Semantic layer skipped" not in sem and re.search(r"Extractor: semantica", sem) and failed < len(g["nodes"])
+          sys.exit(0 if ok else 1)
+          PY
