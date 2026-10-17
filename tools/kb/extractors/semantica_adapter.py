@@ -16,6 +16,7 @@ deterministic graph. Pinned in requirements-graph.txt; a breaking release fails 
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from . import Entity, Extraction, ExtractorUnavailable, NoteText, Relation
@@ -26,6 +27,23 @@ _TYPE_MAP = {
     "PRODUCT": "Tool", "SOFTWARE": "Tool", "TOOL": "Tool", "TECHNOLOGY": "Tool",
     "STANDARD": "Standard", "LAW": "Standard", "PROTOCOL": "Standard",
 }
+
+
+# Things Semantica's pattern and ml extractors report as entities that are not entities in a wiki of essays: years and
+# other numbers, the section headings every note has, and the note's own headings (found by the canary, October 2026).
+_NOT_ENTITIES = {"overview", "read the original", "sources", "source", "see also", "summary", "introduction", "conclusion",
+                 "notes", "note", "contents", "references", "background", "context", "key points", "takeaways"}
+_NUMBERISH = re.compile(r"[\d\s.,:/%$-]+|(q[1-4]|fy|h[12])\s*\d{2,4}", re.I)
+
+
+def _headings(text: str) -> set[str]:
+    return {m.group(1).strip().lower() for m in re.finditer(r"^#{1,6}\s+(.+?)\s*#*$", text, flags=re.M)}
+
+
+def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
+    low = label.lower()
+    return (len(label) >= 3 and low != note.title.lower() and low not in _NOT_ENTITIES and low not in headings
+            and not _NUMBERISH.fullmatch(label))
 
 
 def _load_builder() -> Any:
@@ -71,6 +89,7 @@ class SemanticaExtractor:
         out = Extraction(extractor=f"semantica:{ner}/{rel}")
         by_label: dict[str, Entity] = {}
         for note in notes:
+            headings = _headings(note.text)
             try:
                 kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel)
             except Exception as e:  # one bad note must not sink the build
@@ -78,7 +97,7 @@ class SemanticaExtractor:
                 continue
             for e in (kg or {}).get("entities", []) or []:
                 label = _label(e)
-                if len(label) < 3 or label.lower() == note.title.lower():
+                if not _is_entity(label, note, headings):
                     continue
                 ent = by_label.setdefault(label.lower(), Entity(label=label, type=_etype(e)))
                 if note.id not in ent.mentioned_in:

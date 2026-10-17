@@ -78,15 +78,37 @@ consolidation and stale-note work for you to review; it is capped at $5 of API u
    | Secret | `KF_APP_PRIVATE_KEY` | The App's private key (.pem contents) |
    | Secret | `VERCEL_DEPLOY_HOOK` | The site project's deploy hook URL (below) |
    | Variable | `KF_APP_ID` | The App's ID |
-   | Variable | `GRAPH_EXTRACTOR` | `none` (default) or `semantica` to add machine-extracted entities |
+   | Variable | `GRAPH_EXTRACTOR` | `none` (default) or `semantica` to add machine-extracted entities (see below) |
 
-4. Branch protection on `main`: require a pull request with **1 approving review**, and require the checks
-   **unit tests** and **bundle rules** to pass.
+4. Branch protection on `main`: require a pull request and the checks **unit tests** and **bundle rules**. Require
+   **1 approving review** once pull requests come from the App: GitHub does not let you approve a pull request opened
+   under your own account, and the approve workflow stamps notes only when you approve.
 
-## Set up the website (once)
+## The graph
 
-See `knowledge-foundation-site/README.md`: a Vercel project on that repository with the domain `wiki.muthub.org`
-(a CNAME record to `cname.vercel-dns.com` at your DNS host), and its deploy hook saved here as `VERCEL_DEPLOY_HOOK`.
+`kb graph` (run by CI and by the publish workflow) writes `graph.json`, `graph.graphml` and `report.md`. The backbone is
+deterministic: declared relations, links in the text, theme membership and sources (ADR 009). A note that summarises one
+of Muthu's essays carries its `canonical_essay` into `graph.json` as `canonical`, and the website sends readers there
+first. The website lays the graph out itself (themes on a ring, notes orbiting their theme), so the `x`/`y` here are
+only a fallback for other tools.
+
+**The semantic layer (Semantica)** is optional and off by default (`GRAPH_EXTRACTOR=none`). It runs behind a
+one-function adapter (`tools/kb/extractors/semantica_adapter.py`) and adds machine-found entities as `mentions` edges.
+The `semantica canary` jobs in `tests.yml` run it against the real library on every pull request and report what it
+found (in the job's annotations). What they showed in October 2026, on the 51 seeded notes:
+
+- It runs: 56 entities, 133 mention edges, no note failing.
+- The `pattern` and `ml` methods give the same result: without a spaCy model installed, `ml` falls back to patterns.
+- The quality is low: the most mentioned "entities" were years and section headings. The adapter now drops numbers,
+  dates and headings; the canary lists every entity it keeps, so you can judge.
+- Worth trying next: the `llm` method (`SEMANTICA_NER_METHOD=llm`, provider Anthropic, `claude-haiku-5-5`), which needs
+  `ANTHROPIC_API_KEY`. Turn the layer on (`GRAPH_EXTRACTOR=semantica`) only after the canary's entity list looks useful.
+
+## The website
+
+`muthub-ai/knowledge-foundation-site` builds wiki.muthub.org from each release; its README covers the Vercel project
+(created October 17, 2026; the domain is verified). One step remains: save the project's deploy hook here as
+`VERCEL_DEPLOY_HOOK`, so each release rebuilds the site.
 
 ## Licences
 
