@@ -55,8 +55,11 @@ jobs:
         env: { PYTHONPATH: tools }
 
   semantica-canary:
-    name: semantica canary (not required)
+    name: semantica canary ${{ matrix.ner }} (not required)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { ner: [pattern, ml] }
     timeout-minutes: 15
     continue-on-error: true
     steps:
@@ -66,7 +69,7 @@ jobs:
       - run: pip install -r requirements-graph.txt
       - name: Adapter against the real library, local extraction (no API key)
         run: bash .github/ci-run.sh "semantica canary" python -m kb graph --out dist --extractor semantica
-        env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: pattern, SEMANTICA_RELATION_METHOD: pattern }
+        env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: "${{ matrix.ner }}", SEMANTICA_RELATION_METHOD: pattern }
       # A green build alone proves nothing: the graph falls back to the deterministic layer when Semantica cannot run.
       # Report what Semantica actually did (as an annotation, readable from the Checks API), and fail if it did not run.
       - name: Semantica actually ran
@@ -78,7 +81,9 @@ jobs:
           g = json.load(open("dist/graph.json", encoding="utf-8"))
           ext = sum(1 for e in g["edges"] if e["origin"] == "extracted")
           failed = len(re.findall(r"extraction failed", sem))
-          print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}")
+          ents = sorted((n for n in g["nodes"] if n["id"].startswith("ext:")), key=lambda n: -n["degree"])
+          sample = ", ".join(f"{n['label']} ({n['type']}, {n['degree']})" for n in ents[:25])
+          print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}%0A- Most mentioned: {sample}"[:4000])
           ok = "Semantic layer skipped" not in sem and re.search(r"Extractor: semantica", sem) and failed < len(g["nodes"])
           sys.exit(0 if ok else 1)
           PY
