@@ -1,0 +1,17 @@
+# Edge types of the published graph (graph.json "ontology.edge_types").
+# The first ten are typed relations a curator writes in frontmatter `relations`.
+# The rest are derived by the graph builder.
+- { id: builds_on,    label: "builds on",    description: "The note extends an idea in the target", origin: frontmatter }
+- { id: contradicts,  label: "contradicts",  description: "The note disagrees with the target; both sides are recorded", origin: frontmatter }
+- { id: refines,      label: "refines",      description: "The note narrows or sharpens the target", origin: frontmatter }
+- { id: applies,      label: "applies",      description: "The note puts the target (often a standard or pattern) to work", origin: frontmatter }
+- { id: cites,        label: "cites",        description: "The note draws on the target as evidence", origin: frontmatter }
+- { id: part_of,      label: "part of",      description: "The note belongs to the target (a series, a folder, a larger idea)", origin: frontmatter }
+- { id: authored_by,  label: "authored by",  description: "The target is the author of the note's subject", origin: frontmatter }
+- { id: about,        label: "about",        description: "The note's subject is the target", origin: frontmatter }
+- { id: supersedes,   label: "supersedes",   description: "The note replaces the target, which stays for history", origin: frontmatter }
+- { id: answers,      label: "answers",      description: "The note answers the target question", origin: frontmatter }
+- { id: links_to,     label: "links to",     description: "An untyped See-also or body link", origin: link }
+- { id: in_folder,    label: "in folder",    description: "Folder membership", origin: folder }
+- { id: draws_on,     label: "draws on",     description: "The note was written from the target source", origin: source }
+- { id: mentions,     label: "mentions",     description: "An extractor found the target named in the note", origin: extracted }

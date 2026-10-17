@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiki.muthub.org/schemas/page.schema.json",
+  "title": "Wiki note frontmatter",
+  "description": "A note as LLM-Wiki-V2 (llmwiki2) writes it (an OKF v0.2 concept of type Note), plus the governance fields the curator adds on the pull-request branch and the verification stamp added when Muthu approves the pull request. Unknown keys are preserved, as OKF asks and as llmwiki2 does on rewrite.",
+  "type": "object",
+  "required": [
+    "type",
+    "title",
+    "description",
+    "generated",
+    "sources",
+    "kind",
+    "status",
+    "stale_after",
+    "classification"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "Note"
+      ],
+      "description": "llmwiki2 writes Note; raw copies are type Source and use source.schema.json"
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable note id written by llmwiki2"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 300,
+      "description": "One-line summary; llmwiki2 routes and indexes by it"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "maxItems": 10
+    },
+    "generated": {
+      "type": "object",
+      "required": [
+        "by",
+        "at"
+      ],
+      "properties": {
+        "by": {
+          "type": "string",
+          "description": "OKF actor; llmwiki2 writes its own producer string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "body_hash": {
+          "type": "string"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "resource"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Footnote key; llmwiki2 numbers them s1, s2, ..."
+          },
+          "resource": {
+            "type": "string",
+            "description": "Bundle path of the raw copy (type Source) or an absolute URL"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "previous_version": {
+      "type": "string",
+      "description": "llmwiki2: archived copy of the body a merge replaced"
+    },
+    "fields": {
+      "type": "object",
+      "description": "llmwiki2: producer-defined fields"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "Concept",
+        "Pattern",
+        "Principle",
+        "Decision",
+        "Position",
+        "Question",
+        "Map",
+        "Essay",
+        "Playbook",
+        "Initiative",
+        "Person",
+        "Organization",
+        "Tool",
+        "Standard"
+      ],
+      "description": "Extension: the page type in this wiki's ontology, set by the curator (default Concept); independent of the folder, which is the topic"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "stable",
+        "deprecated"
+      ],
+      "description": "OKF lifecycle; the curator sets draft or stable before review"
+    },
+    "stale_after": {
+      "type": "string",
+      "format": "date-time",
+      "description": "OKF lifecycle; default by kind in ontology/node-types.yaml"
+    },
+    "verified": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/verification"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/verification"
+          }
+        }
+      ],
+      "description": "OKF trust; stamped on the pull-request branch when Muthu approves the review, never by the writer"
+    },
+    "classification": {
+      "type": "string",
+      "const": "public",
+      "description": "Extension: only public knowledge may enter wiki/"
+    },
+    "owner": {
+      "type": "string",
+      "default": "human:muthu"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Other names the graph builder merges into this node; Obsidian and Quartz read the same key"
+    },
+    "relations": {
+      "type": "array",
+      "description": "Extension: typed edges for the graph builder; See-also links and folder membership remain untyped edges",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "target"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "builds_on",
+              "contradicts",
+              "refines",
+              "applies",
+              "cites",
+              "part_of",
+              "authored_by",
+              "about",
+              "supersedes",
+              "answers"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Bundle path of another note"
+          }
+        }
+      }
+    },
+    "canonical_essay": {
+      "type": "string",
+      "format": "uri",
+      "description": "Extension: the muthub.org page this note summarizes, if any; that page stays canonical"
+    }
+  },
+  "definitions": {
+    "verification": {
+      "type": "object",
+      "required": [
+        "by",
+        "at"
+      ],
+      "properties": {
+        "by": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

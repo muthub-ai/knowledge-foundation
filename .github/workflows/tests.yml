@@ -1,0 +1,62 @@
+name: tests
+
+# Required checks on every pull request (branch protection on main requires both jobs).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      # The end-to-end flow test (tests/test_flow.py) finishes by building the website from the release it produced.
+      - uses: actions/checkout@v4
+        with: { repository: muthub-ai/knowledge-foundation-site, path: .site }
+      - run: pip install -r .site/requirements.txt
+      - run: PYTHONPATH=tools:tests python -m unittest discover -s tests -v
+        env: { KF_SITE_REPO: "${{ github.workspace }}/.site" }
+
+  bundle:
+    name: bundle rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Schemas, folders, footnotes, dates, evaluation set, confidential terms
+        run: PYTHONPATH=tools python -m kb check --require-blocklist
+        env: { CONFIDENTIAL_TERMS: "${{ secrets.CONFIDENTIAL_TERMS }}" }
+      - name: LLM-Wiki-V2 conformance (OKF, index drift, links, log)
+        run: llmwiki2 --bundle wiki check
+      - name: Graph builds and matches its schema
+        run: PYTHONPATH=tools python -m kb graph --out dist --revision ${{ github.sha }}
+
+  semantica-canary:
+    name: semantica canary (not required)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements-graph.txt
+      - name: Adapter against the real library, local extraction (no API key)
+        run: PYTHONPATH=tools python -m kb graph --out dist --extractor semantica
+        env: { SEMANTICA_NER_METHOD: pattern, SEMANTICA_RELATION_METHOD: pattern }

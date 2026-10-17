@@ -1,0 +1,4 @@
+# Semantic layer of the graph (optional). Semantica breaks APIs between minor releases: keep it pinned and let the
+# canary job in tests.yml show a new release working before bumping it.
+-r requirements.txt
+semantica[llm-anthropic]==0.7.0

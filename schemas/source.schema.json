@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiki.muthub.org/schemas/source.schema.json",
+  "title": "Wiki raw source frontmatter",
+  "description": "A raw copy under wiki/raw/ as LLM-Wiki-V2 writes it (OKF type Source), plus the fields the capture step adds so the temporal lint and the copyright policy can run.",
+  "type": "object",
+  "required": [
+    "type",
+    "title",
+    "published_at",
+    "origin_kind",
+    "license_note"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "Source"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "resource": {
+      "type": "string",
+      "description": "Where the original lives: an absolute URL for public material"
+    },
+    "author": {
+      "type": "string",
+      "description": "OKF actor convention"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Extension: publication date of the original; required so no note can cite something newer than its claims"
+    },
+    "origin_kind": {
+      "type": "string",
+      "enum": [
+        "own-essay",
+        "own-post",
+        "own-talk",
+        "own-repo",
+        "third-party-note",
+        "third-party-excerpt"
+      ],
+      "description": "Extension: own material may be kept in full; third-party material is kept as a note or short excerpt only"
+    },
+    "license_note": {
+      "type": "string",
+      "description": "Extension: what may be reproduced from this source in a public repository"
+    },
+    "last_modified": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": true
+}

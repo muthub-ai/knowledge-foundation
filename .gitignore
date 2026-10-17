@@ -1,0 +1,7 @@
+.confidential-terms.txt
+__pycache__/
+*.pyc
+dist/
+.env
+.venv/
+.usage.jsonl

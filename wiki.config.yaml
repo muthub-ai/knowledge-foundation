@@ -1,0 +1,76 @@
+# One place for everything a rename or a policy change touches. Nothing else hard-codes the name.
+name: "Knowledge Foundation"     # public name, confirmed by Muthu on Oct 17, 2026
+slug: "knowledge-foundation"
+site_url: "https://wiki.muthub.org"
+canonical_site: "https://muthub.org"
+author:
+  name: "Muthukrishnan Bommiah"
+  actor: "human:muthu"           # OKF actor used in verified stamps
+  url: "https://muthub.org/about"
+  same_as:
+    - "https://www.linkedin.com/in/mbommiah/"
+    - "https://github.com/muthub-ai"
+
+bundle: "wiki"                   # the OKF v0.2 bundle written by LLM-Wiki-V2
+
+# Top-level folders are themes (ADR 003). The Librarian routes by these descriptions.
+themes:
+  context-engineering: "Trusted, governed knowledge that people and agents can rely on: context layers, knowledge formats, retrieval and provenance"
+  governed-ai: "Guardrails, provenance, identity and policy enforced by design for AI systems and agents, including architecture as code"
+  ai-native-sdlc: "How software gets built when agents write much of the code: coding agents, specs, verification and engineering productivity"
+  data-ai-platforms: "Data and ML platforms, lakehouses, MLOps, integration and the infrastructure AI runs on"
+  leading-ai-change: "Strategy, operating models, investment cases and leadership of AI change in large regulated organizations"
+  reference: "People, organizations, tools and standards the notes draw on"
+  start-here: "Maps and guides to this wiki, and decisions about how it is run"
+
+# Display names for the themes (graph and site).
+theme_labels:
+  context-engineering: "Context engineering"
+  governed-ai: "Governed AI"
+  ai-native-sdlc: "AI-native SDLC"
+  data-ai-platforms: "Data & AI platforms"
+  leading-ai-change: "Leading AI change"
+  reference: "Reference"
+  start-here: "Start here"
+
+kinds: [Concept, Pattern, Principle, Decision, Position, Question, Map, Essay, Playbook, Initiative, Person, Organization, Tool, Standard]
+default_kind: Concept
+
+# Months until a note should be re-verified, by kind (OKF stale_after).
+stale_after_months:
+  default: 6
+  Tool: 3
+  Standard: 3
+  Principle: 12
+  Decision: 12
+  Essay: 12
+  Playbook: 6
+  Initiative: 12
+  Person: 12
+  Organization: 12
+
+max_folder_depth: 3
+
+# Hosts the curator may fetch. Everything else is refused.
+allowed_hosts:
+  - muthub.org
+  - aac.muthub.org
+  - github.com
+  - arxiv.org
+  - modelcontextprotocol.io
+  - cloud.google.com
+  - martinfowler.com
+  - anthropic.com
+
+# Models (ADR 013): a local classifier decides, the Claude API writes.
+models:
+  librarian_llm:
+    provider: custom                          # LLM-Wiki-V2 talks to any OpenAI-compatible endpoint
+    base_url: "https://api.anthropic.com/v1/" # Anthropic's OpenAI-compatible endpoint; key from ANTHROPIC_API_KEY
+    model: "claude-sonnet-5-5"
+  classifier:
+    provider: custom                          # local System One server: Ollama 0.35+ (or Laya) on the Mac
+    base_url: "http://localhost:11434/v1"
+    model: "tev1-8k"                          # tev1:4b with num_ctx 8192 (see docs/local-classifier.md)
+  curator: "claude-code with ANTHROPIC_API_KEY"
+  semantica: { provider: anthropic, model: "claude-haiku-5-5" }
