@@ -203,16 +203,21 @@ class EndToEnd(unittest.TestCase):
         with tarfile.open(self.repo / "dist" / "bundle.tgz") as tar:
             tar.extractall(release, filter="data")
         shutil.copy(self.repo / "dist" / "graph.json", release / "graph.json")
-        public = self.tmp / "public"
-        run([sys.executable, "-m", "kfsite", "--bundle", str(release / "wiki"), "--graph", str(release / "graph.json"), "--out", str(public)], SITE)
-        page = (public / note_rel.removesuffix(".md") / "index.html").read_text()
-        self.assertIn("Reviewed by Muthu", page)
-        self.assertIn(datetime.strptime(APPROVED_AT[:10], "%Y-%m-%d").strftime("%b %-d, %Y"), page)
-        self.assertIn('href="https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing"', page)
-        self.assertIn("published Jun 12, 2026", page)
-        self.assertFalse((public / out["raw"].removesuffix(".md")).exists())  # third-party copy is not published
-        self.assertIn("Open Knowledge Format", (public / "search-index.json").read_text())
+        # The site's own steps: stage the release as Quartz content, then (Quartz itself needs npm, so the site's
+        # Quartz stand-in renders it) the finishing step. The real Quartz build is tested in the site's CI.
+        content, public = self.tmp / "content", self.tmp / "public"
+        run([sys.executable, "tests/build_preview.py", "--bundle", str(release / "wiki"), "--graph", str(release / "graph.json"),
+             "--content", str(content), "--public", str(public)], SITE)
+        staged = (content / note_rel).read_text()
+        self.assertIn("> [!success] Reviewed by Muthu", staged)
+        self.assertIn("Last verified " + datetime.strptime(APPROVED_AT[:10], "%Y-%m-%d").strftime("%b %-d, %Y"), staged)
+        self.assertIn("[Introducing the Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/"
+                      "how-the-open-knowledge-format-can-improve-data-sharing) · published Jun 12, 2026", staged)
+        self.assertFalse((content / out["raw"]).exists())  # source copies are not published
+        page = (public / (note_rel.removesuffix(".md") + ".html")).read_text()
+        self.assertIn('data-kf="jsonld"', page)
         self.assertIn(note_rel.removesuffix(".md") + ".md", (public / "llms.txt").read_text())
+        self.assertIn(note_rel, (public / "graph.json").read_text())
 
     # -- the ways it must fail -------------------------------------------------------
     def test_confidential_term_fails_the_check_without_printing_it(self):

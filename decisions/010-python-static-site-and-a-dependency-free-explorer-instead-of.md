@@ -1,6 +1,6 @@
 # ADR 010: Python static site and a dependency-free explorer instead of Quartz and Sigma.js
 
-Status: accepted, October 17, 2026
+Status: superseded by ADR 014 on October 17, 2026 (Muthu chose Quartz and Sigma.js)
 
 ## Context
 

@@ -26,7 +26,7 @@ jobs:
       # The end-to-end flow test (tests/test_flow.py) finishes by building the website from the release it produced.
       - uses: actions/checkout@v4
         with: { repository: muthub-ai/knowledge-foundation-site, path: .site }
-      - run: pip install -r .site/requirements.txt
+      - run: pip install -r .site/requirements.txt -r .site/requirements-dev.txt
       - run: PYTHONPATH=tools:tests python -m unittest discover -s tests -v
         env: { KF_SITE_REPO: "${{ github.workspace }}/.site" }
 

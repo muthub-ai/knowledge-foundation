@@ -26,7 +26,7 @@ Nothing is committed to `main` by a bot, and nothing is marked reviewed until Mu
 | `ontology/`, `schemas/` | Edge types; JSON Schemas for notes, source copies and the graph |
 | `skills/`, `prompts/` | The curator's instructions (Claude Code) and house style for the Librarian |
 | `evals/questions.yaml` | 20 questions with the note that should answer each |
-| `decisions/` | Architecture decision records 001 to 013 |
+| `decisions/` | Architecture decision records 001 to 014 |
 | `tests/` | Unit tests and the end-to-end flow test |
 
 ## Set up on the Mac (once)
