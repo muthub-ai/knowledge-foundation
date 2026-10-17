@@ -149,6 +149,11 @@
           },
           "y": {
             "type": "number"
+          },
+          "canonical": {
+            "type": "string",
+            "format": "uri",
+            "description": "For a note about one of Muthu's essays: the essay on the canonical site (canonical_essay). Readers go there first."
           }
         }
       }

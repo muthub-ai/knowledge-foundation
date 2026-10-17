@@ -56,7 +56,7 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
         G.add_node(n.rel, type=str(fm.get("kind") or "Concept"), label=str(fm.get("title") or n.rel), url=page_url(n.rel),
                    summary=str(fm.get("description") or "")[:300], trust=okf.trust_tier(fm), status=str(fm.get("status") or "stable"),
                    updated=_day((fm.get("generated") or {}).get("at") if isinstance(fm.get("generated"), dict) else None),
-                   tags=[str(t) for t in fm.get("tags") or []])
+                   tags=[str(t) for t in fm.get("tags") or []], canonical=str(fm.get("canonical_essay") or ""))
         aliases[str(fm.get("title") or "").lower()] = n.rel
         for a in fm.get("aliases") or []:
             aliases[str(a).lower()] = n.rel
@@ -124,6 +124,7 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     for node, data in G.nodes(data=True):
         x, y = pos.get(node, (0.0, 0.0))
         nodes.append({"id": node, **{k: data[k] for k in ("type", "label", "url", "summary", "trust", "status", "updated", "tags")},
+                      **({"canonical": data["canonical"]} if data.get("canonical") else {}),
                       "degree": int(U.degree(node)), "community": int(community_of.get(node, 0)),
                       "x": round(float(x) * 1000, 2), "y": round(float(y) * 1000, 2)})
     edges = [{"source": s, "target": t, **{k: d[k] for k in ("type", "origin", "evidence", "weight")}} for s, t, d in G.edges(data=True)]
