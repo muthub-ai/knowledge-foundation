@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiki.muthub.org/schemas/graph.schema.json",
+  "title": "Wiki published graph",
+  "description": "The only contract between the graph builder and the graph explorer. Positions and communities are precomputed so the browser only draws.",
+  "type": "object",
+  "required": [
+    "version",
+    "generated_at",
+    "ontology",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Schema version 1.0; bump the major on a breaking change"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_revision": {
+      "type": "string",
+      "description": "Git commit of the knowledge repository the graph was built from"
+    },
+    "ontology": {
+      "type": "object",
+      "required": [
+        "node_types",
+        "edge_types"
+      ],
+      "properties": {
+        "node_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "description"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "edge_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "description"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label",
+          "url",
+          "summary",
+          "trust",
+          "updated"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable: the page path for page nodes, 'ext:<slug>' for extracted entities"
+          },
+          "type": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "Where a click goes: the wiki page, or the external resource for a Source node"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "unverified",
+              "machine-confirmed",
+              "human-reviewed"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "stable",
+              "deprecated"
+            ]
+          },
+          "updated": {
+            "type": "string",
+            "format": "date"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "degree": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "community": {
+            "type": "integer",
+            "description": "Louvain community id, used only for muted colouring"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "canonical": {
+            "type": "string",
+            "format": "uri",
+            "description": "For a note about one of Muthu's essays: the essay on the canonical site (canonical_essay). Readers go there first."
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "type"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Page path or source id that justifies the edge; extracted edges carry the extractor as 'ext:<model>'"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "frontmatter",
+              "folder",
+              "link",
+              "source",
+              "extracted"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

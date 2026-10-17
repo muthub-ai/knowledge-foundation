@@ -1,0 +1,56 @@
+name: weekly
+
+# Mondays 11:07 UTC (06:07 CDT, 05:07 CST): deterministic checks, then the curator's judgment pass.
+on:
+  schedule:
+    - cron: "7 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app
+        with:
+          app-id: ${{ vars.KF_APP_ID }}
+          private-key: ${{ secrets.KF_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with: { token: "${{ steps.app.outputs.token }}" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Deterministic report
+        run: |
+          {
+            echo "## Deterministic checks"; echo '```'
+            PYTHONPATH=tools python -m kb check || true
+            llmwiki2 --bundle wiki check || true
+            echo; echo "Stale notes:"; PYTHONPATH=tools python -m kb stale
+            echo '```'
+          } > weekly-report.md
+          PYTHONPATH=tools python -m kb graph --out dist > /dev/null && cat dist/report.md >> weekly-report.md
+        env: { CONFIDENTIAL_TERMS: "${{ secrets.CONFIDENTIAL_TERMS }}" }
+      # The curator works on its own branch, and may push only that branch (HEAD): it can never push to main.
+      - name: Curator branch
+        run: git switch -c "curate/weekly-$(date -u +%Y%m%d)-${{ github.run_id }}"
+      - name: Curator judgment pass (Claude Code)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app.outputs.token }}
+          prompt: |
+            Read AGENTS.md, then follow skills/lint.md. The deterministic results are in weekly-report.md.
+            Open one issue titled "Weekly lint" with the date, containing weekly-report.md and your judgment findings
+            as a checklist. If there are mechanical fixes, commit them on the current branch (already a new curate/ branch), push it with
+            `git push -u origin HEAD` and open one pull request.
+          claude_args: |
+            --model claude-sonnet-5-5
+            --max-turns 60
+            --max-budget-usd 5
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(python -m kb:*),Bash(PYTHONPATH=tools python -m kb:*),Bash(llmwiki2 --bundle wiki check),Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh issue create:*),Bash(gh pr create:*)"
+        env: { GH_TOKEN: "${{ steps.app.outputs.token }}" }

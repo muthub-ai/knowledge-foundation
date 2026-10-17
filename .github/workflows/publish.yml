@@ -1,0 +1,49 @@
+name: publish
+
+# Each merge to main becomes a versioned release (bundle, graph, report) and the site rebuilds from it (ADR 004).
+# Nothing here pushes to main.
+on:
+  push:
+    branches: [main]
+    paths: [wiki/**, ontology/**, schemas/**, tools/kb/**, wiki.config.yaml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Only main is published, also when started by hand (a dispatch from another branch would release unmerged notes).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - name: Install (with Semantica when the semantic layer is on)
+        run: pip install -r ${{ vars.GRAPH_EXTRACTOR == 'semantica' && 'requirements-graph.txt' || 'requirements.txt' }}
+      - name: Build the graph
+        run: PYTHONPATH=tools python -m kb graph --out dist --revision ${{ github.sha }} --extractor ${{ vars.GRAPH_EXTRACTOR || 'none' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SEMANTICA_NER_METHOD: ${{ vars.SEMANTICA_NER_METHOD || 'ml' }}
+          SEMANTICA_RELATION_METHOD: ${{ vars.SEMANTICA_RELATION_METHOD || 'pattern' }}
+          SEMANTICA_PROVIDER: anthropic
+          SEMANTICA_MODEL: claude-haiku-5-5
+      - name: Package the bundle
+        run: tar czf dist/bundle.tgz wiki wiki.config.yaml schemas ontology
+      - name: Create the release
+        run: |
+          tag="kf-$(date -u +%Y.%m.%d)-${{ github.run_number }}"
+          gh release create "$tag" dist/bundle.tgz dist/graph.json dist/graph.graphml dist/report.md \
+            --title "$tag" --notes-file dist/report.md --latest --target "$GITHUB_SHA"
+        env: { GH_TOKEN: "${{ github.token }}" }
+      - name: Rebuild the site
+        run: |
+          if [ -n "$HOOK" ]; then curl -fsS -X POST "$HOOK" > /dev/null && echo "site rebuild requested"; else echo "VERCEL_DEPLOY_HOOK not set"; fi
+        env: { HOOK: "${{ secrets.VERCEL_DEPLOY_HOOK }}" }

@@ -1,0 +1,11 @@
+# Notes
+
+* [Leading architecture change without direct authority](leading-architecture-change-without-direct-authority.md) - In a large organization you rarely own the teams you need to move. Architects lead through clarity, credibility and standards people want to follow, and by treating the North Star and today's fires as one job.
+* [AI is an amplifier, not a silver bullet](ai-is-an-amplifier-not-a-silver-bullet.md) - AI magnifies whatever is already in a team. Platform quality, clear policy and updated workflows decide whether that means strength or dysfunction.
+* [Technical debt is an architectural liability](technical-debt-is-an-architectural-liability.md) - Technical debt is a strategic risk rather than messy code. Coding agents make continuous paydown affordable inside everyday work.
+* [Build for today's task or tomorrow's platform?](build-for-today-s-task-or-tomorrow-s-platform.md) - The classic architect's dilemma, upgraded for agents: how much to invest in reusable agents versus fast, single-use ones.
+* [Your prompt history is a more honest review than your calendar](your-prompt-history-is-a-more-honest-review-than-your.md) - My 2025 prompt history split 60% enterprise, 40% personal growth. Here is the prompt I used to audit my own year.
+* [Simplicity is not simplistic](simplicity-is-not-simplistic.md) - Designs that are easy to explain, build and run take the most effort up front, and they are the ones still working years later.
+* [An AI operating model for a bank: ten decisions to make before the twentieth use case](an-ai-operating-model-for-a-bank-ten-decisions-to-make.md) - How a regulated bank should organize, fund, govern and measure AI so that the first few wins turn into a portfolio instead of a pile of pilots.
+* [Gating AI investment: eight gates from pilot to production](gating-ai-investment-eight-gates-from-pilot-to-production.md) - A stage-gate checklist for funding AI use cases in a regulated enterprise: what evidence each gate needs, so money follows results instead of enthusiasm.
+* [Data & AI on Public Cloud](data-ai-on-public-cloud.md) - A multi-cloud Data & AI strategy and reusable, pre-approved archetypes that made public-cloud onboarding much faster and modernized a legacy data warehouse.

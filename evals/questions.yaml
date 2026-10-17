@@ -1,0 +1,43 @@
+# Evaluation set: what the wiki is for. Drafted by Claude for Muthu's edit (Oct 17, 2026).
+# Each question names the notes a good answer must draw on. `python -m kb evals` checks the file in CI (no model
+# calls); `python -m kb evals --live` asks LLM-Wiki-V2 on the Mac and scores how often the expected notes are cited.
+- q: "What is a curated overlay, and why is it better than putting all enterprise context into one store?"
+  expect: [context-engineering/not-another-data-lake-context-needs-curation-not-collection.md]
+- q: "Why do enterprise agents keep starting from zero?"
+  expect: [context-engineering/context-fragmentation-why-your-agents-keep-starting-from.md]
+- q: "What does unmanaged context cost a large organization?"
+  expect: [context-engineering/the-cost-of-unmanaged-context.md]
+- q: "How can knowledge be captured without asking experts to write documentation?"
+  expect: [context-engineering/passive-capture-knowledge-that-writes-itself-with-humans-who.md]
+- q: "What does the Open Knowledge Format add for knowledge that agents read?"
+  expect: [context-engineering/self-describing-knowledge-why-the-open-knowledge-format.md]
+- q: "What are the four risks to solve before adopting MCP in a bank?"
+  expect: [governed-ai/adopting-mcp-in-a-bank-the-four-risks-to-solve-first.md]
+- q: "Why does an enterprise need an MCP registry, and what does it control?"
+  expect: [governed-ai/designing-an-enterprise-mcp-registry-the-control-point.md]
+- q: "How should AI agents be given access to systems: identities or shared secrets?"
+  expect: [governed-ai/securing-ai-agents-identity-not-secrets.md]
+- q: "What is the difference between MCP tools, resources and prompts?"
+  expect: [governed-ai/mcp-in-three-primitives-tools-resources-prompts.md]
+- q: "How do A2A and MCP relate?"
+  expect: [governed-ai/a2a-and-mcp-complementary-not-competing.md]
+- q: "Why must AI-era architecture governance be code rather than review meetings?"
+  expect: [governed-ai/architecture-that-runs-why-ai-era-governance-must-be-code.md]
+- q: "How is the Architecture-as-Code reference platform structured, level by level?"
+  expect: [governed-ai/inside-an-architecture-as-code-platform-a-c4-walkthrough.md]
+- q: "Why is the harness, not the model, the durable investment?"
+  expect: [governed-ai/model-is-a-tool-harness-is-the-strategy.md]
+- q: "What should a bank check before letting coding agents work on its code?"
+  expect: [ai-native-sdlc/governing-coding-agents-in-a-bank-a-12-point-checklist.md]
+- q: "How do the three architectures for AI coding agents differ, and how should an enterprise choose?"
+  expect: [ai-native-sdlc/three-architectures-for-ai-coding-agents-and-how-enterprises.md]
+- q: "What changes in the SDLC when typing code is no longer the bottleneck?"
+  expect: [ai-native-sdlc/the-ai-native-sdlc-when-typing-code-stops-being-the.md]
+- q: "How can provenance show why an AI wrote a piece of code?"
+  expect: [governed-ai/if-you-can-t-prove-why-an-ai-wrote-it-you-can-t-ship-it.md]
+- q: "What are the gates an AI investment should pass from pilot to production?"
+  expect: [leading-ai-change/gating-ai-investment-eight-gates-from-pilot-to-production.md]
+- q: "What decisions make up an AI operating model for a bank?"
+  expect: [leading-ai-change/an-ai-operating-model-for-a-bank-ten-decisions-to-make.md]
+- q: "What are the principles of an agent-first data architecture?"
+  expect: [data-ai-platforms/agent-first-data-architecture-five-principles.md]

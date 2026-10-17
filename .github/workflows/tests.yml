@@ -1,0 +1,106 @@
+name: tests
+
+# Required checks on every pull request (branch protection on main requires both jobs).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      # The end-to-end flow test (tests/test_flow.py) finishes by building the website from the release it produced.
+      # It uses the site repository's main, or (only while that is still empty) its first pull-request branch.
+      - name: The site repository
+        run: |
+          git clone --quiet --depth 1 https://github.com/muthub-ai/knowledge-foundation-site .site
+          if [ ! -d .site/kfsite ]; then git -C .site fetch --quiet --depth 1 origin claude/initial-build && git -C .site checkout --quiet FETCH_HEAD; fi
+          pip install -r .site/requirements.txt -r .site/requirements-dev.txt
+      - name: Unit and end-to-end tests
+        run: bash .github/ci-run.sh "unit tests" python -m unittest discover -s tests -v
+        env: { PYTHONPATH: "tools:tests", KF_SITE_REPO: "${{ github.workspace }}/.site" }
+
+  bundle:
+    name: bundle rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      # The curator agents (opened by the GitHub App) may change knowledge only. Anything else (tools, workflows,
+      # schemas, prompts) would run here with the confidential-terms secret, so it fails before the secret is used.
+      - name: Agent pull requests change only wiki/, inbox/ and evals/
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.type == 'Bot' && github.event.pull_request.user.login != 'dependabot[bot]'
+        env: { BASE_SHA: "${{ github.event.pull_request.base.sha }}" }
+        run: |
+          outside=$(git diff --name-only "$BASE_SHA...HEAD" | grep -v -e '^wiki/' -e '^inbox/' -e '^evals/' || true)
+          if [ -n "$outside" ]; then
+            echo "::error title=agent changed files outside the knowledge::$(echo $outside | tr '\n' ' ')"
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      # Dependabot cannot read Actions secrets; its pull requests change dependencies, not notes, so the confidential
+      # scan runs without terms there instead of failing.
+      - name: Schemas, folders, footnotes, dates, evaluation set, confidential terms
+        run: bash .github/ci-run.sh "kb check" python -m kb check $REQUIRE
+        env:
+          PYTHONPATH: tools
+          CONFIDENTIAL_TERMS: "${{ secrets.CONFIDENTIAL_TERMS }}"
+          REQUIRE: "${{ github.actor == 'dependabot[bot]' && ' ' || '--require-blocklist' }}"
+      - name: LLM-Wiki-V2 conformance (OKF, index drift, links, log)
+        if: ${{ !cancelled() }}
+        run: bash .github/ci-run.sh "llmwiki2 check" llmwiki2 --bundle wiki check
+      - name: Graph builds and matches its schema
+        if: ${{ !cancelled() }}
+        run: bash .github/ci-run.sh "graph" python -m kb graph --out dist --revision ${{ github.sha }}
+        env: { PYTHONPATH: tools }
+
+  semantica-canary:
+    name: semantica canary ${{ matrix.ner }} (not required)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { ner: [pattern, ml] }
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements-graph.txt
+      - name: Adapter against the real library, local extraction (no API key)
+        run: bash .github/ci-run.sh "semantica canary" python -m kb graph --out dist --extractor semantica
+        env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: "${{ matrix.ner }}", SEMANTICA_RELATION_METHOD: pattern }
+      # A green build alone proves nothing: the graph falls back to the deterministic layer when Semantica cannot run.
+      # Report what Semantica actually did (as an annotation, readable from the Checks API), and fail if it did not run.
+      - name: Semantica actually ran
+        run: |
+          python - <<'PY'
+          import json, re, sys
+          rep = open("dist/report.md", encoding="utf-8").read()
+          sem = rep.split("## Semantic layer", 1)[1].strip()
+          g = json.load(open("dist/graph.json", encoding="utf-8"))
+          ext = sum(1 for e in g["edges"] if e["origin"] == "extracted")
+          failed = len(re.findall(r"extraction failed", sem))
+          ents = sorted((n for n in g["nodes"] if n["id"].startswith("ext:")), key=lambda n: -n["degree"])
+          sample = " | ".join(f"{' '.join(n['label'].split())} x{n['degree']}" for n in ents[:40])
+          print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}%0A- Most mentioned: {sample}"[:4000])
+          ok = "Semantic layer skipped" not in sem and re.search(r"Extractor: semantica", sem) and failed < len(g["nodes"])
+          sys.exit(0 if ok else 1)
+          PY

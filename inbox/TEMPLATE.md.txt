@@ -1,0 +1,9 @@
+---
+title: 
+resource: https://
+published_at: YYYY-MM-DD
+origin_kind: third-party-note
+license_note: cite and paraphrase only
+why: 
+---
+Your notes. For third-party material, at most a short excerpt.

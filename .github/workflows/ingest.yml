@@ -1,0 +1,79 @@
+name: ingest (fallback)
+
+# Ingest normally runs on the Mac, where the local classifier decides and Claude writes (CROW).
+# This workflow is the fallback for when you are away: GitHub has no local classifier, so it runs in classic mode
+# (Claude decides and writes). Paste a capture note, or a URL and its publication date.
+on:
+  workflow_dispatch:
+    inputs:
+      resource: { description: "URL of the source", required: true }
+      title: { description: "Title", required: true }
+      published_at: { description: "Publication date (YYYY-MM-DD)", required: true }
+      origin_kind: { description: "own-essay | own-post | own-talk | own-repo | third-party-note | third-party-excerpt", required: true, default: third-party-note }
+      notes: { description: "Your notes (third-party: at most a short excerpt)", required: true }
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app
+        with:
+          app-id: ${{ vars.KF_APP_ID }}
+          private-key: ${{ secrets.KF_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with: { token: "${{ steps.app.outputs.token }}" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Write the capture note
+        run: |
+          git switch -c "ingest/${{ github.run_id }}"
+          f="inbox/$(date -u +%Y%m%d)-${{ github.run_id }}.md"
+          python - "$f" <<'PY'
+          import os, sys, yaml
+          fm = {k: os.environ[k.upper()] for k in ("title", "resource", "published_at", "origin_kind")}
+          fm["license_note"] = "own work" if fm["origin_kind"].startswith("own") else "cite and paraphrase only"
+          body = os.environ["NOTES"]
+          open(sys.argv[1], "w").write("---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n" + body + "\n")
+          PY
+          echo "CAPTURE=$f" >> "$GITHUB_ENV"
+        env:
+          TITLE: ${{ inputs.title }}
+          RESOURCE: ${{ inputs.resource }}
+          PUBLISHED_AT: ${{ inputs.published_at }}
+          ORIGIN_KIND: ${{ inputs.origin_kind }}
+          NOTES: ${{ inputs.notes }}
+      - name: File it (classic mode, Claude)
+        run: PYTHONPATH=tools python tools/librarian/ingest.py "$CAPTURE"
+        env:
+          OKF_MODE: classic
+          OKF_BUNDLE: wiki
+          OKF_PROMPTS_DIR: prompts
+          OKF_LLM_PROVIDER: custom
+          OKF_LLM_BASE_URL: https://api.anthropic.com/v1/
+          OKF_LLM_MODEL: claude-sonnet-5-5
+          OKF_LLM_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Commit the Librarian's work
+        run: |
+          git config user.name "knowledge-foundation[bot]"
+          git config user.email "knowledge-foundation[bot]@users.noreply.github.com"
+          git add -A && git commit -m "Librarian: ingest $TITLE"
+          git push -u origin HEAD
+        env: { TITLE: "${{ inputs.title }}" }  # through env, never interpolated into the script
+      - name: Curate and open the pull request (Claude Code)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app.outputs.token }}
+          prompt: "Read AGENTS.md and follow skills/curate.md for the last commit on this branch, then open the pull request."
+          claude_args: |
+            --model claude-sonnet-5-5
+            --max-turns 40
+            --max-budget-usd 3
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(PYTHONPATH=tools python -m kb:*),Bash(llmwiki2:*),Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git push origin HEAD),Bash(gh pr create:*)"
+        env: { GH_TOKEN: "${{ steps.app.outputs.token }}" }

@@ -1,0 +1,10 @@
+# Muthu reviews every change; these paths run in CI or steer the agents, so they always need his review
+# (with "Require review from Code Owners" on in branch protection for main).
+*            @muthub-ai
+/.github/    @muthub-ai
+/tools/      @muthub-ai
+/schemas/    @muthub-ai
+/ontology/   @muthub-ai
+/prompts/    @muthub-ai
+/skills/     @muthub-ai
+/AGENTS.md   @muthub-ai
