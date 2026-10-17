@@ -24,11 +24,15 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       # The end-to-end flow test (tests/test_flow.py) finishes by building the website from the release it produced.
-      - uses: actions/checkout@v4
-        with: { repository: muthub-ai/knowledge-foundation-site, path: .site }
-      - run: pip install -r .site/requirements.txt -r .site/requirements-dev.txt
-      - run: PYTHONPATH=tools:tests python -m unittest discover -s tests -v
-        env: { KF_SITE_REPO: "${{ github.workspace }}/.site" }
+      # It uses the site repository's main, or (only while that is still empty) its first pull-request branch.
+      - name: The site repository
+        run: |
+          git clone --quiet --depth 1 https://github.com/muthub-ai/knowledge-foundation-site .site
+          if [ ! -d .site/kfsite ]; then git -C .site fetch --quiet --depth 1 origin claude/initial-build && git -C .site checkout --quiet FETCH_HEAD; fi
+          pip install -r .site/requirements.txt -r .site/requirements-dev.txt
+      - name: Unit and end-to-end tests
+        run: bash .github/ci-run.sh "unit tests" python -m unittest discover -s tests -v
+        env: { PYTHONPATH: "tools:tests", KF_SITE_REPO: "${{ github.workspace }}/.site" }
 
   bundle:
     name: bundle rules
@@ -40,12 +44,15 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       - name: Schemas, folders, footnotes, dates, evaluation set, confidential terms
-        run: PYTHONPATH=tools python -m kb check --require-blocklist
-        env: { CONFIDENTIAL_TERMS: "${{ secrets.CONFIDENTIAL_TERMS }}" }
+        run: bash .github/ci-run.sh "kb check" python -m kb check --require-blocklist
+        env: { PYTHONPATH: tools, CONFIDENTIAL_TERMS: "${{ secrets.CONFIDENTIAL_TERMS }}" }
       - name: LLM-Wiki-V2 conformance (OKF, index drift, links, log)
-        run: llmwiki2 --bundle wiki check
+        if: ${{ !cancelled() }}
+        run: bash .github/ci-run.sh "llmwiki2 check" llmwiki2 --bundle wiki check
       - name: Graph builds and matches its schema
-        run: PYTHONPATH=tools python -m kb graph --out dist --revision ${{ github.sha }}
+        if: ${{ !cancelled() }}
+        run: bash .github/ci-run.sh "graph" python -m kb graph --out dist --revision ${{ github.sha }}
+        env: { PYTHONPATH: tools }
 
   semantica-canary:
     name: semantica canary (not required)
@@ -58,5 +65,5 @@ jobs:
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements-graph.txt
       - name: Adapter against the real library, local extraction (no API key)
-        run: PYTHONPATH=tools python -m kb graph --out dist --extractor semantica
-        env: { SEMANTICA_NER_METHOD: pattern, SEMANTICA_RELATION_METHOD: pattern }
+        run: bash .github/ci-run.sh "semantica canary" python -m kb graph --out dist --extractor semantica
+        env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: pattern, SEMANTICA_RELATION_METHOD: pattern }
