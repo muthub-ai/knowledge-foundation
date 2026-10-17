@@ -54,7 +54,7 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     for n in notes:
         fm = n.frontmatter
         G.add_node(n.rel, type=str(fm.get("kind") or "Concept"), label=str(fm.get("title") or n.rel), url=page_url(n.rel),
-                   summary=str(fm.get("description") or "")[:300], trust=okf.trust_tier(fm), status=str(fm.get("status") or "stable"),
+                   summary=str(fm.get("description") or "")[:300], trust=okf.trust_tier(fm), status=str(fm.get("status") or "draft"),
                    updated=_day((fm.get("generated") or {}).get("at") if isinstance(fm.get("generated"), dict) else None),
                    tags=[str(t) for t in fm.get("tags") or []], canonical=str(fm.get("canonical_essay") or ""))
         aliases[str(fm.get("title") or "").lower()] = n.rel
@@ -108,7 +108,9 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
             target = aliases.get(ent.label.lower()) or f"ext:{_slug(ent.label)}"
             if not G.has_node(target):
                 G.add_node(target, type=ent.type, label=ent.label, url="", summary=f"Mentioned in {len(ent.mentioned_in)} note(s); no note yet",
-                           trust="machine-confirmed", status="draft", updated=_day(datetime.now(timezone.utc).isoformat()), tags=[])
+                           trust="machine-confirmed", status="draft", tags=[],
+                           # The newest mentioning note's date, not today's: graph.json stays the same between builds.
+                           updated=max((G.nodes[m]["updated"] for m in ent.mentioned_in if m in G), default=_day(None)))
             for nid in ent.mentioned_in:
                 if not G.has_edge(nid, target):
                     edge(nid, target, "mentions", "extracted", f"ext:{extraction.extractor}")

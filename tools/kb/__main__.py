@@ -62,7 +62,9 @@ def main(argv: list[str] | None = None) -> int:
         if not terms:
             print("blocklist: no confidential terms configured" + (" (required)" if require else " (skipped)"))
             return 1 if require else 0
-        targets = [p for p in (bundle, cfg.repo / "inbox") if p.exists()]
+        # Everything published in this public repository: the bundle and inbox, and the prose and config around them.
+        public = ("inbox", "decisions", "docs", "skills", "prompts", "evals", "ontology", ".github", "README.md", "AGENTS.md", "wiki.config.yaml")
+        targets = [p for p in (bundle, *(cfg.repo / x for x in public)) if p.exists()]
         return _report(blocklist.scan(targets, terms, cfg.repo), "blocklist")
 
     if args.cmd == "validate":

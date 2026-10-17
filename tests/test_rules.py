@@ -141,6 +141,14 @@ class BlocklistTests(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertNotIn("zephyr", str(problems[0]).lower())
 
+    def test_github_workflows_are_scanned_but_other_dot_folders_are_not(self):
+        root = self.b.root.parent
+        for folder in (".github", ".git"):
+            (root / folder).mkdir(exist_ok=True)
+            (root / folder / "x.yml").write_text("name: Project Zephyr\n", encoding="utf-8")
+        found = [p.path for p in blocklist.scan([root / ".github", root / ".git"], ["project zephyr"], root)]
+        self.assertEqual(found, [".github/x.yml:1"])
+
     def test_case_prefix_matches_exact_case_only(self):
         self.b.write("context-engineering/x.md", note_fm(id="n11"), "acme is a word; ACME is a name.\n")
         self.assertEqual(len(blocklist.scan([self.b.root], ["case:ACME"], self.b.root.parent)), 1)

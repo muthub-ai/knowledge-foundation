@@ -34,7 +34,8 @@ def scan(paths: list[Path], terms: list[str], root: Path) -> list[Problem]:
     for base in paths:
         files = [base] if base.is_file() else sorted(p for p in base.rglob("*") if p.is_file())
         for f in files:
-            if f.suffix not in SCAN_SUFFIXES or any(part.startswith(".") for part in f.relative_to(root).parts):
+            # Dot-folders (.git, .venv, caches) are skipped, except .github: workflows are public too.
+            if f.suffix not in SCAN_SUFFIXES or any(part.startswith(".") and part != ".github" for part in f.relative_to(root).parts):
                 continue
             text = f.read_text(encoding="utf-8", errors="replace")
             for term, rx in patterns:

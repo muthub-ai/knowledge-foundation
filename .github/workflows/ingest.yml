@@ -62,8 +62,9 @@ jobs:
         run: |
           git config user.name "knowledge-foundation[bot]"
           git config user.email "knowledge-foundation[bot]@users.noreply.github.com"
-          git add -A && git commit -m "Librarian: ingest ${{ inputs.title }}"
+          git add -A && git commit -m "Librarian: ingest $TITLE"
           git push -u origin HEAD
+        env: { TITLE: "${{ inputs.title }}" }  # through env, never interpolated into the script
       - name: Curate and open the pull request (Claude Code)
         uses: anthropics/claude-code-action@v1
         with:
@@ -74,5 +75,5 @@ jobs:
             --model claude-sonnet-5-5
             --max-turns 40
             --max-budget-usd 3
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(PYTHONPATH=tools python -m kb:*),Bash(llmwiki2:*),Bash(git:*),Bash(gh pr create:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(PYTHONPATH=tools python -m kb:*),Bash(llmwiki2:*),Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git push origin HEAD),Bash(gh pr create:*)"
         env: { GH_TOKEN: "${{ steps.app.outputs.token }}" }

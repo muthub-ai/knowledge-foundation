@@ -42,6 +42,8 @@ class GovernanceTests(unittest.TestCase):
             governance.stamp(self.b.root, [rel], by="process:ci", at="2026-10-17T12:00:00Z")
         self.assertEqual(governance.stamp(self.b.root, [rel, "raw/2026-src.md", "index.md"], by="human:muthu", at="2026-10-17T12:00:00Z"), [rel])
         self.assertEqual(governance.stamp(self.b.root, [rel], by="human:muthu", at="2026-10-17T12:00:00Z"), [])
+        # A second approval the same day (re-approval after a dismissed review) adds no second event.
+        self.assertEqual(governance.stamp(self.b.root, [rel], by="human:muthu", at="2026-10-17T18:30:00Z"), [])
         fm = okf.read(self.b.root / rel, self.b.root).frontmatter
         self.assertEqual(okf.trust_tier(fm), "human-reviewed")
         self.assertEqual(fm["status"], "stable")

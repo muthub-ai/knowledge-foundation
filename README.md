@@ -1,7 +1,7 @@
 # Knowledge Foundation
 
 Muthu Bommiah's public working knowledge on governed AI, context engineering and AI-native software delivery. It is a
-Git repository holding an [Open Knowledge Format](https://github.com/google/open-knowledge-format) v0.2 bundle (`wiki/`),
+Git repository holding an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle (`wiki/`),
 kept by [LLM-Wiki-V2](https://github.com/crow-hq/llm-wiki-v2) and reviewed by Muthu. It is published at
 **wiki.muthub.org** by the separate `knowledge-foundation-site` repository. muthub.org stays the home of the essays and
 does not depend on any of this (ADR 011).
@@ -36,7 +36,7 @@ cd ~/knowledge-foundation
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt                 # llmwiki2 0.5.0, jsonschema, PyYAML, networkx
 cp .env.example .env                            # then put your Anthropic API key in OKF_LLM_API_KEY
-cp ~/muthu-resume/03-site/redesign/confidential-terms.txt .confidential-terms.txt   # git-ignored, never committed
+cp <your private term list> .confidential-terms.txt   # git-ignored, never committed
 ```
 
 The local classifier: install Ollama 0.35 or later and follow `docs/local-classifier.md` (it builds `tev1-8k`, the
@@ -59,8 +59,9 @@ make check       # the same rules CI runs on every pull request
    result and open the pull request.
 3. Read the pull request. Approving it stamps `verified: human:muthu` on the changed notes; merging publishes.
 
-`make stale` lists notes past their re-check date. The weekly workflow (Monday) opens a pull request with the lint,
-consolidation and stale-note work for you to review; it is capped at $5 of API use per run.
+`make stale` lists notes past their re-check date. The weekly workflow (Monday) opens a "Weekly lint" issue with the
+lint, consolidation and stale-note findings, and a pull request when there are mechanical fixes (made on its own
+`curate/` branch); it is capped at $5 of API use per run.
 
 ## Set up GitHub (once)
 
@@ -82,7 +83,10 @@ consolidation and stale-note work for you to review; it is capped at $5 of API u
 
 4. Branch protection on `main`: require a pull request and the checks **unit tests** and **bundle rules**. Require
    **1 approving review** once pull requests come from the App: GitHub does not let you approve a pull request opened
-   under your own account, and the approve workflow stamps notes only when you approve.
+   under your own account, and the approve workflow stamps notes only when you approve. Leave "Dismiss stale pull
+   request approvals" off (the stamp commit would dismiss your approval), block force pushes, and include
+   administrators. This protection is what keeps automated work off `main`; set it before enabling the ingest and
+   weekly workflows.
 
 ## The graph
 

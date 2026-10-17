@@ -47,7 +47,8 @@ def normalize(bundle: Path, cfg: Config, *, paths: list[str] | None = None) -> l
 
 
 def stamp(bundle: Path, rels: list[str], *, by: str, at: str) -> list[str]:
-    """Append a verification event to each listed note (idempotent for the same actor and time)."""
+    """Append a verification event to each listed note (idempotent for the same actor and day: re-approving the same pull
+    request, or a stale-review dismissal followed by a new approval, adds nothing)."""
     if not by.startswith("human:"):
         raise ValueError("only a human actor may stamp a review verification")
     done = []
@@ -57,7 +58,7 @@ def stamp(bundle: Path, rels: list[str], *, by: str, at: str) -> list[str]:
             continue
         doc = okf.read(path, bundle)
         events = okf.verifications(doc.frontmatter)
-        if any(e.get("by") == by and str(e.get("at")) == at for e in events):
+        if any(e.get("by") == by and str(e.get("at"))[:10] == at[:10] for e in events):
             continue
         events.append({"by": by, "at": at})
         doc.frontmatter["verified"] = events[0] if len(events) == 1 else events
