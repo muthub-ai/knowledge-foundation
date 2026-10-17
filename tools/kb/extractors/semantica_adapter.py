@@ -41,6 +41,9 @@ def _headings(text: str) -> set[str]:
 
 
 def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
+    # Pattern matching also returns spans that run from a heading into the next paragraph: an entity is one short line.
+    if "\n" in label or len(label) > 60 or len(label.split()) > 6:
+        return False
     low = label.lower()
     return (len(label) >= 3 and low != note.title.lower() and low not in _NOT_ENTITIES and low not in headings
             and not _NUMBERISH.fullmatch(label))

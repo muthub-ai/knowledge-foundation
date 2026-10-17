@@ -82,7 +82,7 @@ jobs:
           ext = sum(1 for e in g["edges"] if e["origin"] == "extracted")
           failed = len(re.findall(r"extraction failed", sem))
           ents = sorted((n for n in g["nodes"] if n["id"].startswith("ext:")), key=lambda n: -n["degree"])
-          sample = " | ".join(f"{n['label']} x{n['degree']}" for n in ents[:40])
+          sample = " | ".join(f"{' '.join(n['label'].split())} x{n['degree']}" for n in ents[:40])
           print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}%0A- Most mentioned: {sample}"[:4000])
           ok = "Semantic layer skipped" not in sem and re.search(r"Extractor: semantica", sem) and failed < len(g["nodes"])
           sys.exit(0 if ok else 1)

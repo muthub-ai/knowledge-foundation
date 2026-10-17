@@ -140,7 +140,7 @@ class SemanticaAdapterTests(unittest.TestCase):
     def test_dates_numbers_and_headings_are_not_entities(self):
         builder = mock.Mock()
         builder.build.return_value = {"entities": [{"text": t, "type": "MISC"} for t in
-                                                   ("2025", "Q3 2026", "Overview", "Why gates matter", "40%", "OKF")]}
+                                                   ("2025", "Q3 2026", "Overview", "Why gates matter", "40%", "Overview\n\nAd-hoc prompting", "OKF")]}
         out = SemanticaExtractor(builder).extract([NoteText("a/x.md", "X", "# Overview\n\nBody.\n\n## Why gates matter\n")])
         self.assertEqual([e.label for e in out.entities], ["OKF"])
 
