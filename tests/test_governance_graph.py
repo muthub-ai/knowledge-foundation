@@ -183,7 +183,8 @@ class ExtractorStartTest(unittest.TestCase):
                 raise RuntimeError("no API key")
         fake = types.ModuleType("semantica"); kg = types.ModuleType("semantica.kg"); kg.GraphBuilder = Broken
         with unittest.mock.patch.dict(sys.modules, {"semantica": fake, "semantica.kg": kg}):
-            with self.assertRaises(ExtractorUnavailable):
+            # The adapter's own class: other tests reload the kb modules, so the one imported at the top can differ.
+            with self.assertRaises(semantica_adapter.ExtractorUnavailable):
                 semantica_adapter._load_builder()
 
     def test_non_ascii_labels_get_distinct_ids(self):
