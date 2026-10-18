@@ -35,6 +35,7 @@ jobs:
           SEMANTICA_RELATION_METHOD: ${{ vars.SEMANTICA_RELATION_METHOD || 'pattern' }}
           SEMANTICA_PROVIDER: anthropic
           SEMANTICA_MODEL: claude-haiku-5-5
+          SEMANTICA_RELATIONS: ${{ vars.SEMANTICA_RELATIONS || 'llm' }}
       - name: Package the bundle
         run: tar czf dist/bundle.tgz wiki wiki.config.yaml schemas ontology
       - name: Create the release

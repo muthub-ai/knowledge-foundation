@@ -116,6 +116,19 @@ of the pass. What the October 2026 runs on the 51 seeded notes showed:
   provider to read the text blocks. With that, 51 notes take about 150 seconds and yield around 130 entities
   and 250 mention edges before the noise filter (dates, durations, versions, host names).
 
+**Entity resolution and typed relations** (October 18, 2026). The llm pass asks for five entity types only (Concept,
+Standard, Tool, Organization, Practice; people, places, dates and amounts are dropped) and then resolves duplicates in
+three conservative passes (`tools/kb/extractors/resolution.py`): Semantica's fuzzy `EntityResolver` for spelling and
+plural variants, an acronym rule ("MCP" joins "Model Context Protocol", never "MCP server"), and one model call that
+groups synonyms, checked so that only existing names merge and a broader term never absorbs a narrower one. The merged
+entity keeps every other name as an alias. With `SEMANTICA_RELATIONS=llm` (on for releases) a second pass
+(`tools/kb/extractors/relations.py`) shows the model each note and the notes that share entities with it, and asks
+which of the ontology's relation types hold (builds_on, refines, applies, contradicts, cites, part_of, about,
+supersedes, answers). A proposal survives only if its type is in the ontology, its target was offered, its confidence
+is at least 0.7 and its evidence sentence is found word for word in the note. Survivors are published as machine edges
+(origin `extracted`, typed, evidence attached) and never override an authored edge; nothing is written to a note. The
+owner promotes the good ones to frontmatter `relations` through an ordinary pull request.
+
 ## The website
 
 `muthub-ai/knowledge-foundation-site` builds wiki.muthub.org from each release; its README covers the Vercel project
