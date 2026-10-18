@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-three-architectures-for-ai-coding-agents.md
   title: Three architectures for AI coding agents, and how enterprises should choose
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/three-architectures-for-ai-coding-agents
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

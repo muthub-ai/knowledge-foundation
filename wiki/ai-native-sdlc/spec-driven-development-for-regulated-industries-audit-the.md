@@ -18,11 +18,14 @@ sources:
   title: 'Spec-driven development for regulated industries: audit the contract, not
     every line'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/spec-driven-development-for-regulated-industries
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

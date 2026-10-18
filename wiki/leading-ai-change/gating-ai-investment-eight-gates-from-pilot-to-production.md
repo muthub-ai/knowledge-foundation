@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-gating-ai-investment-eight-gates-from.md
   title: 'Gating AI investment: eight gates from pilot to production'
 kind: Playbook
-status: draft
+status: stable
 stale_after: '2027-04-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/playbooks/gating-ai-investment
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

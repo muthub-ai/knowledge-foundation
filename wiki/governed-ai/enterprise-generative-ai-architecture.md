@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-enterprise-generative-ai-architecture.md
   title: Enterprise Generative AI Architecture
 kind: Initiative
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/initiatives/enterprise-genai-architecture
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

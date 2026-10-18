@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-data-ai-on-public-cloud.md
   title: Data & AI on Public Cloud
 kind: Initiative
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/initiatives/multi-cloud-ai-strategy
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

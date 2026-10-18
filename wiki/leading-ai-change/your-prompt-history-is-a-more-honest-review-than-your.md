@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-your-prompt-history-is-a-more-honest.md
   title: Your prompt history is a more honest review than your calendar
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/audit-your-year-with-ai
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

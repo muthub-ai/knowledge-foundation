@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-capture-the-why-the-knowledge-layer.md
   title: 'Capture the why: the knowledge layer enterprise agents are missing'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/capture-the-why
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

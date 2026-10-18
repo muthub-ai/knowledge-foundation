@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-from-mlops-to-ai-engineering-what.md
   title: 'From MLOps to AI engineering: what industrializing ML still teaches us'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/from-mlops-to-ai-engineering
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

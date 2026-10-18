@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-agent-first-data-architecture-five.md
   title: 'Agent-first data architecture: five principles'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/agent-first-data-architecture
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

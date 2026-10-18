@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-build-for-today-s-task-or-tomorrow-s.md
   title: Build for today's task or tomorrow's platform?
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/build-for-today-or-tomorrow
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-governing-coding-agents-in-a-bank-a-12.md
   title: 'Governing coding agents in a bank: a 12-point checklist'
 kind: Playbook
-status: draft
+status: stable
 stale_after: '2027-04-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/playbooks/governing-coding-agents
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

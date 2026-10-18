@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-designing-an-enterprise-mcp-registry-the.md
   title: 'Designing an enterprise MCP registry: the control point agents need'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/designing-an-enterprise-mcp-registry
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

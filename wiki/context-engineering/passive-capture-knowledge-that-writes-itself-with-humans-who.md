@@ -17,7 +17,7 @@ sources:
   resource: /raw/20261017-192545-passive-capture-knowledge-that-writes.md
   title: 'Passive capture: knowledge that writes itself, with humans who approve it'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
@@ -25,6 +25,9 @@ canonical_essay: https://muthub.org/writing/passive-capture
 relations:
 - type: builds_on
   target: /context-engineering/not-another-data-lake-context-needs-curation-not-collection.md
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview
