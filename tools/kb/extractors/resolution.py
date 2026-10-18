@@ -67,9 +67,13 @@ def acronym_pairs(labels: list[str]) -> list[tuple[str, str]]:
     return out
 
 
+def _stem(w: str) -> str:
+    return w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+
+
 def _contains(broad: str, narrow: str) -> bool:
-    """True when one label is the other plus qualifying words ("agents" in "coding agents"): a narrower thing."""
-    b, n = _norm(broad).split(), _norm(narrow).split()
+    """True when one label is the other plus qualifying words ("agents" in "coding agent"): a narrower thing."""
+    b, n = [_stem(w) for w in _norm(broad).split()], [_stem(w) for w in _norm(narrow).split()]
     return len(b) < len(n) and all(w in n for w in b)
 
 
@@ -129,11 +133,17 @@ def resolve(
             groups = []
             if log:
                 log(f"model alias pass skipped ({type(e).__name__}: {e})")
+        def members(k: str) -> list[str]:
+            root = uf.find(k)
+            return [by_key[x].label for x in by_key if uf.find(x) == root]
+
         for g in groups:
             names = [n for n in g if _norm(n) in by_key]
             for other in names[1:]:
-                # A broader and a narrower term are related, not the same thing: never merged by the model pass.
-                if _contains(names[0], other) or _contains(other, names[0]):
+                # A broader and a narrower term are related, not the same thing: never merged by the model pass, also
+                # not through a chain ("AI agent" may not join "agents" because "agent" already did).
+                a, b = members(_norm(names[0])), members(_norm(other))
+                if any(_contains(x, y) or _contains(y, x) for x in a for y in b):
                     continue
                 join(names[0], other, "model")
 

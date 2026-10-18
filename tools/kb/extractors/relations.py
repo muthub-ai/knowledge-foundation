@@ -80,11 +80,13 @@ Allowed relation types (use only these ids):
 {types}
 
 Rules:
-- Propose a relation only when the note's own text makes it explicit or unmistakable. Sharing a topic is not a relation.
-- At most 3 relations. Zero is a good answer.
-- "evidence" must be one sentence copied word for word from the note text (not from a candidate), at least 6 words.
-- "confidence": 0.9 when the note states the relation outright (it names the candidate's idea and says how it uses,
-  extends, narrows or disputes it); 0.75 when it is clearly implied by what the note argues; leave out anything weaker.
+- Propose the relations a careful editor would add to this note's "See also", each with the type that fits best. Up to
+  3. Sharing a topic or a word is not enough: the note must use, extend, narrow, dispute, answer or replace the
+  candidate's idea.
+- "evidence" must be one sentence copied word for word from the note text (not from a candidate), at least 6 words,
+  and it must be the sentence where the note engages with the candidate's idea.
+- "confidence": 0.9 when the note states the relation outright; 0.75 when it is clearly implied by what the note
+  argues; leave out anything weaker.
 
 Return JSON only: {{"relations": [{{"target": "C1", "type": "applies", "evidence": "...", "confidence": 0.8}}]}}
 

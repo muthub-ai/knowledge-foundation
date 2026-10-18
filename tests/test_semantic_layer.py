@@ -49,6 +49,13 @@ class ResolutionTests(unittest.TestCase):
         labels = sorted((e.label for e in out), key=str.lower)
         self.assertEqual(labels, ["agents", "coding agents", "Open Policy Agent"])
 
+    def test_model_pass_cannot_chain_a_narrower_term_into_a_broader_one(self):
+        fuzzy = mock.Mock(return_value=[{"id": "agents", "merged_from": ["agents", "agent"]}])
+        groups = mock.Mock(return_value=[["AI agent", "agents"], ["AI agent", "AI agents"]])
+        out = resolve([E("agents", "a.md"), E("agent", "b.md"), E("AI agent", "c.md"), E("AI agents", "d.md")],
+                      fuzzy=fuzzy, alias_groups=groups)
+        self.assertEqual(sorted((e.label, tuple(e.aliases)) for e in out), [("AI agents", ("AI agent",)), ("agents", ("agent",))])
+
     def test_a_failing_pass_is_logged_not_fatal(self):
         notes = []
         out = resolve([E("A thing", "a.md")], fuzzy=mock.Mock(side_effect=RuntimeError("boom")),
