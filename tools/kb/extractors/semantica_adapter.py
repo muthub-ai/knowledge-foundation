@@ -15,8 +15,10 @@ deterministic graph. Pinned in requirements-graph.txt; a breaking release fails 
 
 from __future__ import annotations
 
+import logging
 import os
 import re
+import time
 from typing import Any
 
 from . import Entity, Extraction, ExtractorUnavailable, NoteText, Relation
@@ -34,6 +36,14 @@ _TYPE_MAP = {
 _NOT_ENTITIES = {"overview", "read the original", "sources", "source", "see also", "summary", "introduction", "conclusion",
                  "notes", "note", "contents", "references", "background", "context", "key points", "takeaways"}
 _NUMBERISH = re.compile(r"[\d\s.,:/%$-]+|(q[1-4]|fy|h[12])\s*\d{2,4}", re.I)
+# Not knowledge, however often the model returns them: dates and date ranges, durations and quantities ("3 years",
+# "25B+ records a day"), version numbers, bare month names, and host names (every note cites muthub.org).
+_MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
+_NOISE = re.compile(
+    rf"({_MONTHS})(\s+\d{{4}})?|\d{{4}}\s*[–-]\s*(\d{{4}}|present)|\d[\d.,]*\s*[a-z+%]*\s+(years?|months?|weeks?|days?|hours?|minutes?|seconds?)\b.*"
+    rf"|\d[\d.,]*[kmbt]?\+?\s+\w+(\s+(a|per)\s+\w+)?|v?\d+(\.\d+)+|[a-z0-9-]+(\.[a-z0-9-]+)*\.(org|com|net|io|ai|dev|app)(/\S*)?",
+    re.I,
+)
 
 
 def _headings(text: str) -> set[str]:
@@ -46,7 +56,46 @@ def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
         return False
     low = label.lower()
     return (len(label) >= 3 and low != note.title.lower() and low not in _NOT_ENTITIES and low not in headings
-            and not _NUMBERISH.fullmatch(label))
+            and not _NUMBERISH.fullmatch(label) and not _NOISE.fullmatch(label))
+
+
+def _patch_anthropic_provider() -> None:
+    """Semantica 0.7.0 reads `response.content[0].text` from Anthropic. Current Claude models can answer with a
+    thinking block first, which has no `.text`, so every call failed and the layer silently fell back to patterns.
+    Read the text blocks instead (all of them, joined). Remove once Semantica does this itself."""
+    try:
+        from semantica.semantic_extract import providers as P  # type: ignore[import-not-found]
+    except Exception:
+        return
+    cls = getattr(P, "AnthropicProvider", None)
+    if cls is None or getattr(cls, "_kf_patched", False):
+        return
+
+    def text_of(response: Any) -> str:
+        parts = [getattr(b, "text", "") for b in getattr(response, "content", []) or [] if getattr(b, "type", "text") == "text"]
+        return "".join(parts).strip()
+
+    def create(self: Any, prompt: str, kwargs: dict[str, Any]) -> Any:
+        if not self.client:
+            raise P.ProcessingError("Anthropic client not initialized. Set ANTHROPIC_API_KEY or pass api_key.")
+        args: dict[str, Any] = {"model": kwargs.get("model", self.model), "max_tokens": kwargs.get("max_tokens", 8192),
+                                "messages": [{"role": "user", "content": prompt}]}
+        for k in ("temperature", "top_p", "top_k", "stop_sequences", "system", "metadata"):
+            if k in kwargs:
+                args[k] = kwargs[k]
+        return self.client.messages.create(**args)
+
+    def generate(self: Any, prompt: str, **kwargs: Any) -> str:
+        return text_of(create(self, prompt, kwargs))
+
+    def generate_structured(self: Any, prompt: str, **kwargs: Any) -> Any:
+        response = create(self, f"{prompt}\n\nReturn the response as valid JSON only.", kwargs)
+        try:
+            return self._parse_json(text_of(response))
+        except Exception as e:
+            raise P.ProcessingError(f"Failed to parse JSON from Anthropic response: {e}") from e
+
+    cls.generate, cls.generate_structured, cls._kf_patched = generate, generate_structured, True
 
 
 def _load_builder() -> Any:
@@ -54,6 +103,7 @@ def _load_builder() -> Any:
         from semantica.kg import GraphBuilder  # type: ignore[import-not-found]
     except Exception as e:  # ImportError, or a broken release raising at import time
         raise ExtractorUnavailable(f"semantica is not importable: {e}") from e
+    _patch_anthropic_provider()
     kwargs: dict[str, Any] = {"merge_entities": True, "entity_resolution_strategy": "fuzzy", "resolve_conflicts": True}
     if os.environ.get("SEMANTICA_PROVIDER"):
         kwargs["provider"] = os.environ["SEMANTICA_PROVIDER"]
@@ -94,13 +144,25 @@ class SemanticaExtractor:
         rel = os.environ.get("SEMANTICA_RELATION_METHOD", "pattern")
         out = Extraction(extractor=f"semantica:{ner}/{rel}")
         by_label: dict[str, Entity] = {}
+        # Semantica's default "fallback" strategy quietly substitutes pattern matching when a method fails (an LLM
+        # call that errors looks exactly like a pattern run). "union" keeps only what the requested method found, and
+        # the library's warnings are collected so the report says why a method produced nothing.
+        extra: dict[str, Any] = {"merge_strategy": "union"} if ner != "pattern" else {}
+        warnings = _Warnings()
+        logging.getLogger("semantica").addHandler(warnings)
+        started, slowest = time.monotonic(), (0.0, "")
         for note in notes:
             headings = _headings(note.text)
+            t0 = time.monotonic()
             try:
-                kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel)
+                kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel, **extra)
             except Exception as e:  # one bad note must not sink the build
                 out.notes.append(f"{note.id}: extraction failed ({type(e).__name__}: {e})")
                 continue
+            finally:
+                took = time.monotonic() - t0
+                slowest = max(slowest, (took, note.id))
+                print(f"semantica {ner}: {note.id} in {took:.1f}s", flush=True)
             for e in (kg or {}).get("entities", []) or []:
                 label = _label(e)
                 if not _is_entity(label, note, headings):
@@ -112,5 +174,21 @@ class SemanticaExtractor:
                 s, t, typ = _rel_ends(r)
                 if s and t and s.lower() != t.lower():
                     out.relations.append(Relation(source=s, target=t, type="mentions" if typ == "mentions" else typ))
+        logging.getLogger("semantica").removeHandler(warnings)
+        out.notes.append(f"{ner} pass: {len(notes)} notes in {time.monotonic() - started:.0f}s, slowest {slowest[1]} at {slowest[0]:.0f}s")
+        out.notes.extend(f"semantica warned: {w}" for w in warnings.seen[:5])
         out.entities = sorted(by_label.values(), key=lambda e: e.label.lower())
         return out
+
+
+class _Warnings(logging.Handler):
+    """Distinct warning and error messages Semantica logged during a build (its method failures are only logged)."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.seen: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        text = " ".join(record.getMessage().split())[:300]
+        if text not in self.seen:
+            self.seen.append(text)
