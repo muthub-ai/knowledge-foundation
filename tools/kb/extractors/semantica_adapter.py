@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from . import Entity, Extraction, ExtractorUnavailable, NoteText, Relation
@@ -101,13 +102,19 @@ class SemanticaExtractor:
         extra: dict[str, Any] = {"merge_strategy": "union"} if ner != "pattern" else {}
         warnings = _Warnings()
         logging.getLogger("semantica").addHandler(warnings)
+        started, slowest = time.monotonic(), (0.0, "")
         for note in notes:
             headings = _headings(note.text)
+            t0 = time.monotonic()
             try:
                 kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel, **extra)
             except Exception as e:  # one bad note must not sink the build
                 out.notes.append(f"{note.id}: extraction failed ({type(e).__name__}: {e})")
                 continue
+            finally:
+                took = time.monotonic() - t0
+                slowest = max(slowest, (took, note.id))
+                print(f"semantica {ner}: {note.id} in {took:.1f}s", flush=True)
             for e in (kg or {}).get("entities", []) or []:
                 label = _label(e)
                 if not _is_entity(label, note, headings):
@@ -120,6 +127,7 @@ class SemanticaExtractor:
                 if s and t and s.lower() != t.lower():
                     out.relations.append(Relation(source=s, target=t, type="mentions" if typ == "mentions" else typ))
         logging.getLogger("semantica").removeHandler(warnings)
+        out.notes.append(f"{ner} pass: {len(notes)} notes in {time.monotonic() - started:.0f}s, slowest {slowest[1]} at {slowest[0]:.0f}s")
         out.notes.extend(f"semantica warned: {w}" for w in warnings.seen[:5])
         out.entities = sorted(by_label.values(), key=lambda e: e.label.lower())
         return out

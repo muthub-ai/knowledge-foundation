@@ -76,7 +76,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: { ner: [pattern, ml, llm] }
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.ner == 'llm' && 50 || 15 }}  # the llm pass makes one model call per note, with retries
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
