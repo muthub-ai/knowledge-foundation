@@ -27,28 +27,27 @@ behind.**
 ## Architecture
 
 ```mermaid
-flowchart LR
-  subgraph capture["Capture"]
-    I[inbox/ capture note]
+flowchart TB
+  I["inbox/ capture note"] --> C
+  subgraph librarian["Librarian: LLM-Wiki-V2 in CROW mode"]
+    direction LR
+    C["Local classifier<br/>decides where it goes"] --> W["Claude<br/>writes the note"]
   end
-  subgraph librarian["Librarian (LLM-Wiki-V2, CROW mode)"]
-    C[Local classifier<br/>decides where it goes] --> W[Claude<br/>writes the note]
+  W --> PR["branch + pull request"]
+  subgraph review["Review"]
+    direction LR
+    CI["CI: kb check · llmwiki2 check<br/>schemas · dates · blocklist · graph"] --> H{"Muthu approves"}
   end
-  subgraph review["Review on a pull request"]
-    CI[CI: kb check · llmwiki2 check<br/>schemas · dates · blocklist · graph]
-    H{Muthu approves}
+  PR --> CI
+  H -- "stamp verified: human:muthu" --> M["merge to main"]
+  subgraph publish["Publish"]
+    direction LR
+    G["kb graph<br/>deterministic backbone"] --> R[("release<br/>bundle.tgz · graph.json · report.md")]
+    S["Semantica layer<br/>entities · resolution · typed relations"] --> R
   end
-  subgraph publish["Publish on merge"]
-    G[kb graph<br/>deterministic backbone]
-    S[Semantica semantic layer<br/>entities · resolution · typed relations]
-    R[(Release<br/>bundle.tgz · graph.json · report.md)]
-  end
-  I --> C
-  W --> PR[branch + pull request] --> CI --> H
-  H -- "stamp verified: human:muthu" --> M[merge to main]
-  M --> G --> R
-  M --> S --> R
-  R -- deploy hook --> SITE[wiki.muthub.org<br/>Quartz 5 + Sigma.js 4]
+  M --> G
+  M --> S
+  R -- "deploy hook" --> SITE(["wiki.muthub.org<br/>Quartz 5 + Sigma.js 4"])
 ```
 
 Three repositories, one direction of dependency:
