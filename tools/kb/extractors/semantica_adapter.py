@@ -36,6 +36,14 @@ _TYPE_MAP = {
 _NOT_ENTITIES = {"overview", "read the original", "sources", "source", "see also", "summary", "introduction", "conclusion",
                  "notes", "note", "contents", "references", "background", "context", "key points", "takeaways"}
 _NUMBERISH = re.compile(r"[\d\s.,:/%$-]+|(q[1-4]|fy|h[12])\s*\d{2,4}", re.I)
+# Not knowledge, however often the model returns them: dates and date ranges, durations and quantities ("3 years",
+# "25B+ records a day"), version numbers, bare month names, and host names (every note cites muthub.org).
+_MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
+_NOISE = re.compile(
+    rf"({_MONTHS})(\s+\d{{4}})?|\d{{4}}\s*[–-]\s*(\d{{4}}|present)|\d[\d.,]*\s*[a-z+%]*\s+(years?|months?|weeks?|days?|hours?|minutes?|seconds?)\b.*"
+    rf"|\d[\d.,]*[kmbt]?\+?\s+\w+(\s+(a|per)\s+\w+)?|v?\d+(\.\d+)+|[a-z0-9-]+(\.[a-z0-9-]+)*\.(org|com|net|io|ai|dev|app)(/\S*)?",
+    re.I,
+)
 
 
 def _headings(text: str) -> set[str]:
@@ -48,7 +56,7 @@ def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
         return False
     low = label.lower()
     return (len(label) >= 3 and low != note.title.lower() and low not in _NOT_ENTITIES and low not in headings
-            and not _NUMBERISH.fullmatch(label))
+            and not _NUMBERISH.fullmatch(label) and not _NOISE.fullmatch(label))
 
 
 def _patch_anthropic_provider() -> None:

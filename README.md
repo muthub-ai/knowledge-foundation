@@ -98,19 +98,23 @@ of Muthu's essays carries its `canonical_essay` into `graph.json` as `canonical`
 first. The website lays the graph out itself (themes on a ring, notes orbiting their theme), so the `x`/`y` here are
 only a fallback for other tools.
 
-**The semantic layer (Semantica)** is optional and off by default (`GRAPH_EXTRACTOR=none`). It runs behind a
-one-function adapter (`tools/kb/extractors/semantica_adapter.py`) and adds machine-found entities as `mentions` edges.
-The `semantica canary` jobs in `tests.yml` run it against the real library on every pull request and report what it
-found (in the job's annotations). What they showed in October 2026, on the 51 seeded notes:
+**The semantic layer (Semantica)** is on for releases (`GRAPH_EXTRACTOR=semantica`, NER method `llm`: Anthropic,
+`claude-haiku-5-5`, key in the `ANTHROPIC_API_KEY` secret; the repository variables `GRAPH_EXTRACTOR` and
+`SEMANTICA_NER_METHOD` override both, `none` switches the layer off). It runs behind a one-function adapter
+(`tools/kb/extractors/semantica_adapter.py`) and adds machine-found entities as `mentions` edges, drawn dashed in the
+explorer and filterable there. The `semantica canary` jobs in `tests.yml` run the `pattern`, `ml` and `llm` methods on
+every pull request and report what each found in the job's annotations, with the library's own warnings and the timing
+of the pass. What the October 2026 runs on the 51 seeded notes showed:
 
-- It runs, on every note, with no failures.
-- The `pattern` and `ml` methods give the same result: without a spaCy model installed, `ml` falls back to patterns.
-- Unfiltered, the quality is low: 56 "entities", led by years and section headings. The adapter now drops numbers,
-  dates, headings and spans that run across lines, which leaves 19 entities and 43 mention edges. Most are real
-  (The Model Context Protocol, Open Knowledge Format, Google Cloud), but some are still fragments ("In June",
-  "Enterprise Generative"), so the layer stays off. The canary lists every entity it keeps, so you can judge.
-- Worth trying next: the `llm` method (`SEMANTICA_NER_METHOD=llm`, provider Anthropic, `claude-haiku-5-5`), which needs
-  `ANTHROPIC_API_KEY`. Turn the layer on (`GRAPH_EXTRACTOR=semantica`) only after the canary's entity list looks useful.
+- `pattern` and `ml` give the same result (no spaCy model, so `ml` falls back to patterns): 19 entities and 43 edges
+  after the adapter drops numbers, dates, headings and spans across lines; some are still fragments.
+- `llm` took six runs to work, and every failure was silent until the canary was made to report it: Semantica's
+  default merge strategy substitutes pattern matching when a method fails, the first API key was not scoped to a
+  workspace, the account had no credit, the 15-minute job limit cut the pass short, and Semantica 0.7.0 reads
+  `response.content[0].text`, which is a thinking block with current Claude models. The adapter now asks for the
+  `union` strategy (no silent fallback), copies Semantica's warnings into the report, and patches the Anthropic
+  provider to read the text blocks. With that, 51 notes take about 150 seconds and yield around 130 entities
+  and 250 mention edges before the noise filter (dates, durations, versions, host names).
 
 ## The website
 
