@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: { ner: [pattern, ml] }
+      matrix: { ner: [pattern, ml, llm] }
     timeout-minutes: 15
     continue-on-error: true
     steps:
@@ -83,9 +83,15 @@ jobs:
       - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements-graph.txt
-      - name: Adapter against the real library, local extraction (no API key)
+      - name: Adapter against the real library (pattern and ml run locally; llm uses the Anthropic key)
         run: bash .github/ci-run.sh "semantica canary" python -m kb graph --out dist --extractor semantica
-        env: { PYTHONPATH: tools, SEMANTICA_NER_METHOD: "${{ matrix.ner }}", SEMANTICA_RELATION_METHOD: pattern }
+        env:
+          PYTHONPATH: tools
+          SEMANTICA_NER_METHOD: ${{ matrix.ner }}
+          SEMANTICA_RELATION_METHOD: pattern
+          ANTHROPIC_API_KEY: ${{ matrix.ner == 'llm' && secrets.ANTHROPIC_API_KEY || '' }}
+          SEMANTICA_PROVIDER: ${{ matrix.ner == 'llm' && 'anthropic' || '' }}
+          SEMANTICA_MODEL: ${{ matrix.ner == 'llm' && 'claude-haiku-5-5' || '' }}
       # A green build alone proves nothing: the graph falls back to the deterministic layer when Semantica cannot run.
       # Report what Semantica actually did (as an annotation, readable from the Checks API), and fail if it did not run.
       - name: Semantica actually ran
