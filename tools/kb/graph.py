@@ -42,6 +42,29 @@ def _day(ts: Any) -> str:
     return text[:10] if re.match(r"\d{4}-\d{2}-\d{2}", text) else "1970-01-01"
 
 
+def _opt_day(ts: Any) -> str:
+    """A date when there is one, else "" (unlike _day, which gives sorting-safe 1970 for a missing timestamp)."""
+    text = str(ts or "")
+    return text[:10] if re.match(r"\d{4}-\d{2}-\d{2}", text) else ""
+
+
+def _human_verified(fm: dict[str, Any]) -> str:
+    """Day of the latest human verification; "" when no human has reviewed the note yet."""
+    return max((_opt_day(v.get("at")) for v in okf.verifications(fm) if str(v.get("by", "")).startswith("human:")), default="")
+
+
+def _source_date(fm: dict[str, Any], raws: dict[str, Any]) -> str:
+    """Earliest publication day among the note's dated sources; "" when none is dated."""
+    days = []
+    for s in fm.get("sources") or []:
+        res = str(s.get("resource", "")) if isinstance(s, dict) else ""
+        raw = raws.get(res.lstrip("/")) if res.startswith("/") else None
+        d = _opt_day(raw.frontmatter.get("published_at")) if raw is not None else ""
+        if d:
+            days.append(d)
+    return min(days, default="")
+
+
 def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revision: str = "") -> tuple[dict[str, Any], str]:
     G = nx.DiGraph()
     notes = list(okf.notes(bundle))
@@ -59,7 +82,8 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
         G.add_node(n.rel, type=str(fm.get("kind") or "Concept"), label=str(fm.get("title") or n.rel), url=page_url(n.rel),
                    summary=str(fm.get("description") or "")[:300], trust=okf.trust_tier(fm), status=str(fm.get("status") or "draft"),
                    updated=_day((fm.get("generated") or {}).get("at") if isinstance(fm.get("generated"), dict) else None),
-                   tags=[str(t) for t in fm.get("tags") or []], canonical=str(fm.get("canonical_essay") or ""))
+                   tags=[str(t) for t in fm.get("tags") or []], canonical=str(fm.get("canonical_essay") or ""),
+                   verified=_human_verified(fm), stale_after=_opt_day(fm.get("stale_after")), source_date=_source_date(fm, raws))
         aliases[str(fm.get("title") or "").lower()] = n.rel
         for a in fm.get("aliases") or []:
             aliases[str(a).lower()] = n.rel
@@ -131,7 +155,7 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     for node, data in G.nodes(data=True):
         x, y = pos.get(node, (0.0, 0.0))
         nodes.append({"id": node, **{k: data[k] for k in ("type", "label", "url", "summary", "trust", "status", "updated", "tags")},
-                      **({"canonical": data["canonical"]} if data.get("canonical") else {}),
+                      **{k: data[k] for k in ("canonical", "verified", "stale_after", "source_date") if data.get(k)},
                       "degree": int(U.degree(node)), "community": int(community_of.get(node, 0)),
                       "x": round(float(x) * 1000, 2), "y": round(float(y) * 1000, 2)})
     edges = [{"source": s, "target": t, **{k: d[k] for k in ("type", "origin", "evidence", "weight")}} for s, t, d in G.edges(data=True)]
