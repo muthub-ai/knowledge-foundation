@@ -1,141 +1,153 @@
 # Knowledge Foundation
 
-Muthu Bommiah's public working knowledge on governed AI, context engineering and AI-native software delivery. It is a
-Git repository holding an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle (`wiki/`),
-kept by [LLM-Wiki-V2](https://github.com/crow-hq/llm-wiki-v2) and reviewed by Muthu. It is published at
-**wiki.muthub.org** by the separate `knowledge-foundation-site` repository. muthub.org stays the home of the essays and
-does not depend on any of this (ADR 011).
+**A governed, machine-readable knowledge base, kept by an LLM librarian and approved by a human, published as a graph.**
 
-```
-capture (inbox/) ─► Librarian: the local classifier decides, Claude writes ─► branch + pull request
-      ─► CI: kb check, llmwiki2 check, graph, end-to-end tests ─► Muthu approves ─► stamp "verified: human:muthu"
-      ─► merge ─► release kf-YYYY.MM.DD-N (bundle.tgz, graph.json) ─► Vercel rebuilds wiki.muthub.org
+[![tests](https://github.com/muthub-ai/knowledge-foundation/actions/workflows/tests.yml/badge.svg)](https://github.com/muthub-ai/knowledge-foundation/actions/workflows/tests.yml)
+[![publish](https://github.com/muthub-ai/knowledge-foundation/actions/workflows/publish.yml/badge.svg)](https://github.com/muthub-ai/knowledge-foundation/actions/workflows/publish.yml)
+[![latest release](https://img.shields.io/github/v/release/muthub-ai/knowledge-foundation?label=release)](https://github.com/muthub-ai/knowledge-foundation/releases/latest)
+[![code: MIT](https://img.shields.io/badge/code-MIT-blue)](LICENSE)
+[![notes: CC BY 4.0](https://img.shields.io/badge/notes-CC%20BY%204.0-lightgrey)](CONTENT-LICENSE)
+
+**Live:** [wiki.muthub.org](https://wiki.muthub.org) · **Essays:** [muthub.org](https://muthub.org) · **Site repo:** [knowledge-foundation-site](https://github.com/muthub-ai/knowledge-foundation-site) · **Replicate it:** [docs/plan](docs/plan/README.md)
+
+This repository is Muthu Bommiah's public working knowledge on governed AI, context engineering and AI-native software
+delivery, held as an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle.
+It is also a working reference for the argument the essays make: **AI can write into a system of record only if every
+claim carries its source, every change goes through review, and machine output is kept apart from what a person stood
+behind.**
+
+| | |
+|---|---|
+| **Notes** | 51 across five themes, each with dated sources and a review state |
+| **Graph** | deterministic backbone (links, declared relations, sources) plus a labelled semantic layer: ~90 entities and ~40 machine-suggested relations per release |
+| **Governance** | no bot commits to `main`; owner approval stamps `verified`; confidential-terms scan on every change; 16 decision records |
+| **Quality gates** | 64 unit tests, an end-to-end flow test, JSON Schema checks, date rules, a Semantica canary per extraction method |
+| **Output** | a versioned release per merge (`bundle.tgz`, `graph.json`, `report.md`) that rebuilds wiki.muthub.org |
+
+## Architecture
+
+```mermaid
+flowchart TB
+  I["inbox/ capture note"] --> C
+  subgraph librarian["Librarian: LLM-Wiki-V2 in CROW mode"]
+    direction LR
+    C["Local classifier<br/>decides where it goes"] --> W["Claude<br/>writes the note"]
+  end
+  W --> PR["branch + pull request"]
+  subgraph review["Review"]
+    direction LR
+    CI["CI: kb check · llmwiki2 check<br/>schemas · dates · blocklist · graph"] --> H{"Muthu approves"}
+  end
+  PR --> CI
+  H -- "stamp verified: human:muthu" --> M["merge to main"]
+  subgraph publish["Publish"]
+    direction LR
+    G["kb graph<br/>deterministic backbone"] --> R[("release<br/>bundle.tgz · graph.json · report.md")]
+    S["Semantica layer<br/>entities · resolution · typed relations"] --> R
+  end
+  M --> G
+  M --> S
+  R -- "deploy hook" --> SITE(["wiki.muthub.org<br/>Quartz 5 + Sigma.js 4"])
 ```
 
-Nothing is committed to `main` by a bot, and nothing is marked reviewed until Muthu approves the pull request (ADR 004, 006).
+Three repositories, one direction of dependency:
+
+```mermaid
+flowchart LR
+  KF["knowledge-foundation<br/>(this repo: content, rules, graph)"] -- "release assets only" --> SITE["knowledge-foundation-site<br/>(Quartz + Sigma explorer)"]
+  SITE --> WIKI(["wiki.muthub.org"])
+  KF -. "graph.json counts, hourly, with fallback" .-> MU["muthu-v0-portfolio-website"]
+  MU --> ORG(["muthub.org"])
+  WIKI -- "canonical essay links" --> ORG
+```
+
+The site never imports code from this repository, and muthub.org never needs the wiki to be up (ADR 004, 011, 015).
+
+## Design principles
+
+1. **Git is the system of record** (ADR 001). Notes are Markdown with YAML frontmatter: identity, kind, sources,
+   `generated`, `verified`, `stale_after`. Any tool can read them; nothing is locked in a database.
+2. **Durable knowledge, replaceable intelligence** (ADR 002, 013). A local classifier routes; Claude writes through the
+   API; either can be swapped without touching the bundle.
+3. **Nothing is "reviewed" until a person says so** (ADR 004, 006). Bots open pull requests; only the owner's approval
+   stamps `verified: human:muthu`; only a merge publishes.
+4. **Every claim has a dated source** (ADR 007, 008). Own material is kept in full; third-party material only as notes
+   and a short excerpt. A note may not cite a source published after it.
+5. **Deterministic first, semantic second** (ADR 009, 016). The graph backbone uses no model. The semantic layer adds
+   machine-found entities and suggested relations, labelled as such, hidden by default on the site, never overriding
+   an authored edge, and promoted only through a reviewed pull request.
+6. **Public knowledge only** (ADR 012). A private blocklist runs locally and in CI; the checker never prints a matched term.
+
+## How a note gets here
+
+| Step | What happens | Where |
+|---|---|---|
+| 1. Capture | A capture note with `title`, `published_at`, `origin_kind`, `license_note` | `inbox/` |
+| 2. File | The local classifier picks the theme, matches existing notes and relations; Claude writes | `make ingest`, `tools/librarian/` |
+| 3. Curate | Claude Code tidies, links and checks, then opens the pull request with a claims table | `make curate`, `skills/` |
+| 4. Check | Schemas, dates, links, confidential terms, LLM-Wiki-V2's own checks, graph build | `.github/workflows/tests.yml` |
+| 5. Approve | Owner approval stamps `verified` on the changed notes, with the GitHub App's token | `approve.yml` |
+| 6. Publish | Merge cuts a release with the graph and the semantic layer; the deploy hook rebuilds the site | `publish.yml` |
+| 7. Keep fresh | Weekly lint, consolidation and stale-note report, capped spend | `weekly.yml`, `make stale` |
+
+## The graph and the semantic layer
+
+`kb graph` writes `graph.json` (the contract with the site, `schemas/graph.schema.json`), `graph.graphml` and `report.md`.
+
+- **Backbone (deterministic):** theme membership, links in the text, typed relations declared in frontmatter
+  (`ontology/edge-types.yaml`), and sources with publication dates.
+- **Semantic layer ([Semantica](https://github.com/semantica-agi/semantica), behind a one-function adapter):**
+  - *Ontology-constrained extraction*: five entity types (Concept, Standard, Tool, Organization, Practice).
+  - *Entity resolution*: spelling and plural folding, Semantica's `EntityResolver`, an acronym rule (MCP → Model
+    Context Protocol, never MCP server) and one checked model pass; merged entities keep their aliases.
+  - *Typed relations between notes*: the model may use only the ontology's relation types, only for candidate notes it
+    was shown, and must quote the supporting sentence; a proposal whose quote is not in the note is dropped.
+  - `kb propose` writes chosen suggestions into frontmatter for a reviewed pull request.
+- **Canary:** every pull request runs the extractor with each method (`pattern`, `ml`, `llm`) against the real notes
+  and publishes what it found, the library's warnings and the timing as check annotations. The story of why that
+  canary exists is the essay [Six runs, one canary](https://muthub.org/writing/six-runs-one-canary-governed-extraction).
+
+## Quickstart
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt          # add requirements-graph.txt for the semantic layer
+make test                                 # unit tests + end-to-end flow (scripted models, no network)
+make check                                # the rules CI runs on every pull request
+make graph                                # dist/graph.json, graph.graphml, report.md
+```
+
+Full setup, including the local classifier, the GitHub App, secrets, branch protection and the semantic layer, is in
+[docs/plan](docs/plan/README.md).
 
 ## Repository map
 
 | Path | What it is |
 | --- | --- |
-| `wiki/` | The OKF bundle: theme folders, notes, `raw/` source copies, `index.md` and `log.md` in every folder |
-| `wiki.config.yaml` | Name, site, themes and their routing descriptions, kinds, re-verification periods, models |
-| `inbox/` | Capture notes waiting to be ingested (`TEMPLATE.md.txt`); processed ones move to `inbox/done/` |
-| `tools/kb/` | Governance tools: validate, dates, confidential terms, normalize, stamp, graph, evals |
-| `tools/librarian/` | Ingest a capture through LLM-Wiki-V2; the one-off seed from muthub.org |
+| `wiki/` | The OKF bundle: theme folders, notes, `raw/` source copies, `index.md` and `log.md` per folder |
+| `wiki.config.yaml` | Name, site, themes and routing descriptions, kinds, re-verification periods, models |
+| `inbox/` | Captures waiting to be filed (`TEMPLATE.md.txt`); processed ones move to `inbox/done/` |
+| `tools/kb/` | Governance: validate, dates, blocklist, normalize, stamp, propose, graph, evals |
+| `tools/kb/extractors/` | The semantic layer: Semantica adapter, entity resolution, typed relations |
+| `tools/librarian/` | Ingest through LLM-Wiki-V2; the one-off seed from muthub.org |
 | `ontology/`, `schemas/` | Edge types; JSON Schemas for notes, source copies and the graph |
-| `skills/`, `prompts/` | The curator's instructions (Claude Code) and house style for the Librarian |
+| `skills/`, `prompts/`, `AGENTS.md` | The curator agent's standing orders and procedures; house style for the Librarian |
 | `evals/questions.yaml` | 20 questions with the note that should answer each |
-| `decisions/` | Architecture decision records 001 to 014 |
+| `decisions/` | [Architecture decision records](decisions/README.md) |
+| `docs/plan/` | [Step-by-step plan to build this again](docs/plan/README.md) |
 | `tests/` | Unit tests and the end-to-end flow test |
 
-## Set up on the Mac (once)
+## Operations
 
-```bash
-cd ~/knowledge-foundation
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt                 # llmwiki2 0.5.0, jsonschema, PyYAML, networkx
-cp .env.example .env                            # then put your Anthropic API key in OKF_LLM_API_KEY
-cp <your private term list> .confidential-terms.txt   # git-ignored, never committed
-```
-
-The local classifier: install Ollama 0.35 or later and follow `docs/local-classifier.md` (it builds `tev1-8k`, the
-classifier with an 8k context). Claude does the writing through the API; the classifier only decides where a note goes,
-whether it matches an existing note and what it relates to, so routing costs nothing and stays on the Mac.
-
-Check everything works:
-
-```bash
-make test        # unit tests and the end-to-end flow (scripted models, no network)
-make check       # the same rules CI runs on every pull request
-```
-
-## Daily use
-
-1. Drop a capture in `inbox/` (copy `inbox/TEMPLATE.md.txt`). It needs `title`, `published_at`, `origin_kind` and
-   `license_note`. Your own material can be complete; third-party material is your notes plus at most a short excerpt
-   (2,500 characters), never the full text.
-2. `git switch -c capture/okf && make ingest` files it. `make curate` asks Claude Code to tidy, link and check the
-   result and open the pull request.
-3. Read the pull request. Approving it stamps `verified: human:muthu` on the changed notes; merging publishes.
-
-`make stale` lists notes past their re-check date. The weekly workflow (Monday) opens a "Weekly lint" issue with the
-lint, consolidation and stale-note findings, and a pull request when there are mechanical fixes (made on its own
-`curate/` branch); it is capped at $5 of API use per run.
-
-## Set up GitHub (once)
-
-1. Create the public repository `muthub-ai/knowledge-foundation` and push `main`.
-2. Create a GitHub App (Settings → Developer settings → GitHub Apps → New), name it `knowledge-foundation-bot`:
-   no webhook; repository permissions **Contents: read and write**, **Pull requests: read and write**,
-   **Issues: read and write**. Install it on this repository only. Pull requests and commits made with the App's token
-   trigger the test workflows, which the built-in `GITHUB_TOKEN` cannot do (ADR 005).
-3. Repository settings → Secrets and variables → Actions:
-
-   | Kind | Name | Value |
-   | --- | --- | --- |
-   | Secret | `ANTHROPIC_API_KEY` | For the weekly curator and the classic-mode ingest fallback |
-   | Secret | `CONFIDENTIAL_TERMS` | The blocklist, terms separated by `\|`. The checker never prints a matched term |
-   | Secret | `KF_APP_PRIVATE_KEY` | The App's private key (.pem contents) |
-   | Secret | `VERCEL_DEPLOY_HOOK` | The site project's deploy hook URL (below) |
-   | Variable | `KF_APP_ID` | The App's ID |
-   | Variable | `GRAPH_EXTRACTOR` | `none` (default) or `semantica` to add machine-extracted entities (see below) |
-
-4. Branch protection on `main`: require a pull request and the checks **unit tests** and **bundle rules**. Require
-   **1 approving review** once pull requests come from the App: GitHub does not let you approve a pull request opened
-   under your own account, and the approve workflow stamps notes only when you approve. Leave "Dismiss stale pull
-   request approvals" off (the stamp commit would dismiss your approval), turn on "Require review from Code Owners"
-   (`.github/CODEOWNERS`), block force pushes, and include administrators. Because stale approvals stay, check
-   that nothing was pushed after your approval before you merge; the approve workflow stamps only the exact commit
-   you approved, and stamps nothing if the branch has moved on. This protection is what keeps automated work off `main`; set it before enabling the ingest and
-   weekly workflows.
-
-## The graph
-
-`kb graph` (run by CI and by the publish workflow) writes `graph.json`, `graph.graphml` and `report.md`. The backbone is
-deterministic: declared relations, links in the text, theme membership and sources (ADR 009). A note that summarises one
-of Muthu's essays carries its `canonical_essay` into `graph.json` as `canonical`, and the website sends readers there
-first. The website lays the graph out itself (themes on a ring, notes orbiting their theme), so the `x`/`y` here are
-only a fallback for other tools.
-
-**The semantic layer (Semantica)** is on for releases (`GRAPH_EXTRACTOR=semantica`, NER method `llm`: Anthropic,
-`claude-haiku-5-5`, key in the `ANTHROPIC_API_KEY` secret; the repository variables `GRAPH_EXTRACTOR` and
-`SEMANTICA_NER_METHOD` override both, `none` switches the layer off). It runs behind a one-function adapter
-(`tools/kb/extractors/semantica_adapter.py`) and adds machine-found entities as `mentions` edges, drawn dashed in the
-explorer and filterable there. The `semantica canary` jobs in `tests.yml` run the `pattern`, `ml` and `llm` methods on
-every pull request and report what each found in the job's annotations, with the library's own warnings and the timing
-of the pass. What the October 2026 runs on the 51 seeded notes showed:
-
-- `pattern` and `ml` give the same result (no spaCy model, so `ml` falls back to patterns): 19 entities and 43 edges
-  after the adapter drops numbers, dates, headings and spans across lines; some are still fragments.
-- `llm` took six runs to work, and every failure was silent until the canary was made to report it: Semantica's
-  default merge strategy substitutes pattern matching when a method fails, the first API key was not scoped to a
-  workspace, the account had no credit, the 15-minute job limit cut the pass short, and Semantica 0.7.0 reads
-  `response.content[0].text`, which is a thinking block with current Claude models. The adapter now asks for the
-  `union` strategy (no silent fallback), copies Semantica's warnings into the report, and patches the Anthropic
-  provider to read the text blocks. With that, 51 notes take about 150 seconds and yield around 130 entities
-  and 250 mention edges before the noise filter (dates, durations, versions, host names).
-
-**Entity resolution and typed relations** (October 18, 2026). The llm pass asks for five entity types only (Concept,
-Standard, Tool, Organization, Practice; people, places, dates and amounts are dropped) and then resolves duplicates in
-three conservative passes (`tools/kb/extractors/resolution.py`): Semantica's fuzzy `EntityResolver` for spelling and
-plural variants, an acronym rule ("MCP" joins "Model Context Protocol", never "MCP server"), and one model call that
-groups synonyms, checked so that only existing names merge and a broader term never absorbs a narrower one. The merged
-entity keeps every other name as an alias. With `SEMANTICA_RELATIONS=llm` (on for releases) a second pass
-(`tools/kb/extractors/relations.py`) shows the model each note and the notes that share entities with it, and asks
-which of the ontology's relation types hold (builds_on, refines, applies, contradicts, cites, part_of, about,
-supersedes, answers). A proposal survives only if its type is in the ontology, its target was offered, its confidence
-is at least 0.7 and its evidence sentence is found word for word in the note. Survivors are published as machine edges
-(origin `extracted`, typed, evidence attached) and never override an authored edge; nothing is written to a note. The
-owner promotes the good ones to frontmatter `relations` through an ordinary pull request.
-
-## The website
-
-`muthub-ai/knowledge-foundation-site` builds wiki.muthub.org from each release; its README covers the Vercel project
-(created October 17, 2026; the domain is verified). One step remains: save the project's deploy hook here as
-`VERCEL_DEPLOY_HOOK`, so each release rebuilds the site.
+- **Releases:** one per merge to `main`, tagged `kf-YYYY.MM.DD-N`. The site always builds from the latest release;
+  roll back by re-publishing an older tag's assets or reverting the merge.
+- **Switches:** repository variables `GRAPH_EXTRACTOR`, `SEMANTICA_NER_METHOD`, `SEMANTICA_RELATIONS` (`none` turns the
+  semantic layer off without a code change).
+- **Cost:** the semantic layer is a few cents of API use per release; the weekly curator is capped at $5 per run.
+- **Runbook and failure modes:** [docs/plan/06-operations.md](docs/plan/06-operations.md).
 
 ## Licences
 
-Code: MIT (`LICENSE`), except `tools/librarian/` and `tests/test_flow.py`, which import LLM-Wiki-V2 and are
-AGPL-3.0-or-later (`LICENSES/README.md`). Notes: CC BY 4.0 (`CONTENT-LICENSE`).
+Code: MIT ([LICENSE](LICENSE)), except `tools/librarian/` and `tests/test_flow.py`, which import LLM-Wiki-V2 and are
+AGPL-3.0-or-later ([LICENSES](LICENSES/README.md)). Notes: CC BY 4.0 ([CONTENT-LICENSE](CONTENT-LICENSE)).
+Views are the author's own and do not represent his employer.
