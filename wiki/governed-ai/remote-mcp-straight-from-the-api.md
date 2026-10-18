@@ -23,6 +23,9 @@ canonical_essay: https://muthub.org/writing/mcp-connector-messages-api
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /governed-ai/mcp-in-three-primitives-tools-resources-prompts.md
 ---
 
 # Overview

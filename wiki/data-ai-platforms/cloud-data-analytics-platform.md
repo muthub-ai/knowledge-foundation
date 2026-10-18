@@ -23,6 +23,9 @@ canonical_essay: https://muthub.org/initiatives/data-analytics-platform-usaa
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /data-ai-platforms/controlled-data-movement.md
 ---
 
 # Overview

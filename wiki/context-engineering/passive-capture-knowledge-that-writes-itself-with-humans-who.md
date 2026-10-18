@@ -25,6 +25,8 @@ canonical_essay: https://muthub.org/writing/passive-capture
 relations:
 - type: builds_on
   target: /context-engineering/not-another-data-lake-context-needs-curation-not-collection.md
+- type: builds_on
+  target: /data-ai-platforms/capture-the-why-the-knowledge-layer-enterprise-agents-are.md
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
