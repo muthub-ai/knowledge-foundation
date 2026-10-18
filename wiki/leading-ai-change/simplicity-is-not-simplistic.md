@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-simplicity-is-not-simplistic.md
   title: Simplicity is not simplistic
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/simplicity-in-architecture
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

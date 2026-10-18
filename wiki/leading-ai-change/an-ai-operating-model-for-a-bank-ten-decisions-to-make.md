@@ -17,11 +17,14 @@ sources:
   title: 'An AI operating model for a bank: ten decisions to make before the twentieth
     use case'
 kind: Playbook
-status: draft
+status: stable
 stale_after: '2027-04-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/playbooks/ai-operating-model-for-a-bank
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

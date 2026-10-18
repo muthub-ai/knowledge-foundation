@@ -17,7 +17,7 @@ sources:
   resource: /raw/20261017-192545-not-another-data-lake-context-needs.md
   title: 'Not another data lake: context needs curation, not collection'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
@@ -25,6 +25,9 @@ canonical_essay: https://muthub.org/writing/not-another-data-lake
 relations:
 - type: builds_on
   target: /context-engineering/context-fragmentation-why-your-agents-keep-starting-from.md
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

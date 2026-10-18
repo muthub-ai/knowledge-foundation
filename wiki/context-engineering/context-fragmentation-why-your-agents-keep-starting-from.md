@@ -16,7 +16,7 @@ sources:
   resource: /raw/20261017-192545-context-fragmentation-why-your-agents.md
   title: 'Context fragmentation: why your agents keep starting from zero'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/context-fragmentation
 relations:
 - type: builds_on
   target: /context-engineering/the-cost-of-unmanaged-context.md
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

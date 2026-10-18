@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-leading-architecture-change-without.md
   title: Leading architecture change without direct authority
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/leading-without-authority
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

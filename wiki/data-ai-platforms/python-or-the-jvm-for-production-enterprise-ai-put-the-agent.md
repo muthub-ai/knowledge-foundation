@@ -19,11 +19,14 @@ sources:
   title: Python or the JVM for production enterprise AI? Put the agent where the transaction
     lives
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/python-or-jvm-for-enterprise-ai
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

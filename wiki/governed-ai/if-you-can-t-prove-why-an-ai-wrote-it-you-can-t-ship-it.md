@@ -16,11 +16,14 @@ sources:
   resource: /raw/20261017-192545-if-you-can-t-prove-why-an-ai-wrote-it.md
   title: If you can't prove why an AI wrote it, you can't ship it
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/if-you-cant-prove-why-an-ai-wrote-it
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

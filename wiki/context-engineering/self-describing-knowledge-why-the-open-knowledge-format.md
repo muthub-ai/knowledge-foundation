@@ -19,7 +19,7 @@ sources:
   title: 'Self-describing knowledge: why the Open Knowledge Format matters, and what
     enterprises must add'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
@@ -27,6 +27,9 @@ canonical_essay: https://muthub.org/writing/self-describing-knowledge-open-knowl
 relations:
 - type: builds_on
   target: /context-engineering/passive-capture-knowledge-that-writes-itself-with-humans-who.md
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview

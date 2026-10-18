@@ -15,11 +15,14 @@ sources:
   resource: /raw/20261017-192545-a2a-and-mcp-complementary-not-competing.md
   title: 'A2A and MCP: complementary, not competing'
 kind: Essay
-status: draft
+status: stable
 stale_after: '2027-10-17T00:00:00Z'
 classification: public
 owner: human:muthu
 canonical_essay: https://muthub.org/writing/a2a-and-mcp
+verified:
+  by: human:muthu
+  at: '2026-10-18T02:01:22Z'
 ---
 
 # Overview
