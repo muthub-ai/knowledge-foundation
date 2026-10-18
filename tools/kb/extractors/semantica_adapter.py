@@ -15,6 +15,7 @@ deterministic graph. Pinned in requirements-graph.txt; a breaking release fails 
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any
@@ -94,10 +95,16 @@ class SemanticaExtractor:
         rel = os.environ.get("SEMANTICA_RELATION_METHOD", "pattern")
         out = Extraction(extractor=f"semantica:{ner}/{rel}")
         by_label: dict[str, Entity] = {}
+        # Semantica's default "fallback" strategy quietly substitutes pattern matching when a method fails (an LLM
+        # call that errors looks exactly like a pattern run). "union" keeps only what the requested method found, and
+        # the library's warnings are collected so the report says why a method produced nothing.
+        extra: dict[str, Any] = {"merge_strategy": "union"} if ner != "pattern" else {}
+        warnings = _Warnings()
+        logging.getLogger("semantica").addHandler(warnings)
         for note in notes:
             headings = _headings(note.text)
             try:
-                kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel)
+                kg = builder.build([note.text], extract_relations=True, ner_method=ner, relation_method=rel, **extra)
             except Exception as e:  # one bad note must not sink the build
                 out.notes.append(f"{note.id}: extraction failed ({type(e).__name__}: {e})")
                 continue
@@ -112,5 +119,20 @@ class SemanticaExtractor:
                 s, t, typ = _rel_ends(r)
                 if s and t and s.lower() != t.lower():
                     out.relations.append(Relation(source=s, target=t, type="mentions" if typ == "mentions" else typ))
+        logging.getLogger("semantica").removeHandler(warnings)
+        out.notes.extend(f"semantica warned: {w}" for w in warnings.seen[:5])
         out.entities = sorted(by_label.values(), key=lambda e: e.label.lower())
         return out
+
+
+class _Warnings(logging.Handler):
+    """Distinct warning and error messages Semantica logged during a build (its method failures are only logged)."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.seen: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        text = " ".join(record.getMessage().split())[:300]
+        if text not in self.seen:
+            self.seen.append(text)
