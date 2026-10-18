@@ -22,10 +22,10 @@ jobs:
           private-key: ${{ secrets.KF_APP_PRIVATE_KEY }}
       # The stamping code comes from main, never from the pull request: the PR's files are only data here, so nothing
       # the PR changed runs with the App's write token.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { path: base, ref: "${{ github.event.pull_request.base.ref }}", persist-credentials: false }
       # Exactly the commit Muthu approved. If the branch has moved on since, nothing is stamped: approve again.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: pr
           ref: ${{ github.event.review.commit_id }}
