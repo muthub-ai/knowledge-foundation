@@ -51,11 +51,51 @@ def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
             and not _NUMBERISH.fullmatch(label))
 
 
+def _patch_anthropic_provider() -> None:
+    """Semantica 0.7.0 reads `response.content[0].text` from Anthropic. Current Claude models can answer with a
+    thinking block first, which has no `.text`, so every call failed and the layer silently fell back to patterns.
+    Read the text blocks instead (all of them, joined). Remove once Semantica does this itself."""
+    try:
+        from semantica.semantic_extract import providers as P  # type: ignore[import-not-found]
+    except Exception:
+        return
+    cls = getattr(P, "AnthropicProvider", None)
+    if cls is None or getattr(cls, "_kf_patched", False):
+        return
+
+    def text_of(response: Any) -> str:
+        parts = [getattr(b, "text", "") for b in getattr(response, "content", []) or [] if getattr(b, "type", "text") == "text"]
+        return "".join(parts).strip()
+
+    def create(self: Any, prompt: str, kwargs: dict[str, Any]) -> Any:
+        if not self.client:
+            raise P.ProcessingError("Anthropic client not initialized. Set ANTHROPIC_API_KEY or pass api_key.")
+        args: dict[str, Any] = {"model": kwargs.get("model", self.model), "max_tokens": kwargs.get("max_tokens", 8192),
+                                "messages": [{"role": "user", "content": prompt}]}
+        for k in ("temperature", "top_p", "top_k", "stop_sequences", "system", "metadata"):
+            if k in kwargs:
+                args[k] = kwargs[k]
+        return self.client.messages.create(**args)
+
+    def generate(self: Any, prompt: str, **kwargs: Any) -> str:
+        return text_of(create(self, prompt, kwargs))
+
+    def generate_structured(self: Any, prompt: str, **kwargs: Any) -> Any:
+        response = create(self, f"{prompt}\n\nReturn the response as valid JSON only.", kwargs)
+        try:
+            return self._parse_json(text_of(response))
+        except Exception as e:
+            raise P.ProcessingError(f"Failed to parse JSON from Anthropic response: {e}") from e
+
+    cls.generate, cls.generate_structured, cls._kf_patched = generate, generate_structured, True
+
+
 def _load_builder() -> Any:
     try:
         from semantica.kg import GraphBuilder  # type: ignore[import-not-found]
     except Exception as e:  # ImportError, or a broken release raising at import time
         raise ExtractorUnavailable(f"semantica is not importable: {e}") from e
+    _patch_anthropic_provider()
     kwargs: dict[str, Any] = {"merge_entities": True, "entity_resolution_strategy": "fuzzy", "resolve_conflicts": True}
     if os.environ.get("SEMANTICA_PROVIDER"):
         kwargs["provider"] = os.environ["SEMANTICA_PROVIDER"]
