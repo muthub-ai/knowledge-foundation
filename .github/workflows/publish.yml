@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - name: Install (with Semantica when the semantic layer is on)
         run: pip install -r ${{ vars.GRAPH_EXTRACTOR == 'semantica' && 'requirements-graph.txt' || 'requirements.txt' }}

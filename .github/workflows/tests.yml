@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       # The end-to-end flow test (tests/test_flow.py) finishes by building the website from the release it produced.
@@ -51,7 +51,7 @@ jobs:
             echo "::error title=agent changed files outside the knowledge::$(echo $outside | tr '\n' ' ')"
             exit 1
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
       # Dependabot cannot read Actions secrets; its pull requests change dependencies, not notes, so the confidential
@@ -80,7 +80,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements-graph.txt
       - name: Adapter against the real library, local extraction (no API key)
