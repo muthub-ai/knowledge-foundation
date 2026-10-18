@@ -40,8 +40,10 @@ class _UnionFind:
 
 
 def _norm(label: str) -> str:
-    # Case, hyphens, slashes and spacing never make two things different: "Architecture-as-Code" = "architecture as code".
-    return " ".join(re.sub(r"[-_/]+", " ", label.casefold()).split())
+    # Case, hyphens, slashes, spacing and a plural "s" never make two things different: "Architecture-as-Code" =
+    # "architecture as code", "agents" = "agent". Acronyms keep their letters ("OKFs" is not "OKF" plus a word).
+    words = re.sub(r"[-_/]+", " ", label.casefold()).split()
+    return " ".join(w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w for w in words)
 
 
 def initials(label: str) -> str:
@@ -99,8 +101,10 @@ def resolve(
         k = _norm(e.label)
         if k in by_key:
             first = by_key[k]
+            if len(e.mentioned_in) > len(first.mentioned_in):  # the commoner spelling names the entity
+                first.label, first.type, e = e.label, e.type, Entity(first.label, first.type, first.mentioned_in, first.aliases)
             first.mentioned_in += [m for m in e.mentioned_in if m not in first.mentioned_in]
-            first.aliases = sorted(set(first.aliases) | {e.label} - {first.label})
+            first.aliases = sorted((set(first.aliases) | set(e.aliases) | {e.label}) - {first.label})
             merges.append(f"{first.label} = {e.label} (spelling)")
         else:
             by_key[k] = Entity(e.label, e.type, list(e.mentioned_in), list(e.aliases))

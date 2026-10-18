@@ -3,6 +3,8 @@
 normalize   adds missing defaults on a branch: kind, status, stale_after, classification, owner (never `verified`)
 stamp       adds `verified: {by: human:<owner>, at: <approval time>}` to the notes a pull request changed; runs
             only when the owner approves the review (ADR 006)
+propose     adds machine-suggested typed relations (from graph.json, origin "extracted") to the source notes'
+            frontmatter `relations`, on a branch, for the owner to accept or edit in a pull request
 """
 
 from __future__ import annotations
@@ -67,3 +69,27 @@ def stamp(bundle: Path, rels: list[str], *, by: str, at: str) -> list[str]:
         okf.write(doc)
         done.append(rel)
     return done
+
+
+def propose(bundle: Path, graph_json: dict, *, min_confidence: float = 0.0, types: set[str] | None = None) -> list[tuple[str, str, str, float, str]]:
+    """Write the typed relations the semantic layer suggested into the source notes' `relations` (never `verified`,
+    never a relation the note already declares). Returns (source, type, target, confidence, evidence) for each added."""
+    by_rel = {n.rel: n for n in okf.notes(bundle)}
+    added = []
+    for e in sorted(graph_json.get("edges", []), key=lambda e: (e["source"], e["target"])):
+        if e.get("origin") != "extracted" or e.get("type") == "mentions" or e["source"] not in by_rel or e["target"] not in by_rel:
+            continue
+        if types and e["type"] not in types or float(e.get("weight") or 0) < min_confidence:
+            continue
+        doc = by_rel[e["source"]]
+        fm = dict(doc.frontmatter)
+        rels = [r for r in fm.get("relations") or [] if isinstance(r, dict)]
+        target = "/" + e["target"]
+        if any(str(r.get("target", "")).lstrip("/") == e["target"] for r in rels):
+            continue
+        rels.append({"type": e["type"], "target": target})
+        fm["relations"] = rels
+        doc.frontmatter = fm
+        okf.write(doc)
+        added.append((e["source"], e["type"], e["target"], float(e.get("weight") or 0), str(e.get("evidence") or "")))
+    return added

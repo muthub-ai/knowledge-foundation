@@ -54,7 +54,7 @@ class ResolutionTests(unittest.TestCase):
         groups = mock.Mock(return_value=[["AI agent", "agents"], ["AI agent", "AI agents"]])
         out = resolve([E("agents", "a.md"), E("agent", "b.md"), E("AI agent", "c.md"), E("AI agents", "d.md")],
                       fuzzy=fuzzy, alias_groups=groups)
-        self.assertEqual(sorted((e.label, tuple(e.aliases)) for e in out), [("AI agents", ("AI agent",)), ("agents", ("agent",))])
+        self.assertEqual(sorted(sorted([e.label, *e.aliases]) for e in out), [["AI agent", "AI agents"], ["agent", "agents"]])
 
     def test_a_failing_pass_is_logged_not_fatal(self):
         notes = []
@@ -169,6 +169,26 @@ class GraphTests(unittest.TestCase):
         ent = next(n for n in g["nodes"] if n["id"] == "ext:model-context-protocol")
         self.assertEqual(ent["aliases"], ["MCP"])
         self.assertIn("Typed relations proposed: 1 new", report)
+
+
+class ProposeTests(unittest.TestCase):
+    def test_propose_adds_relations_once_and_never_verified(self):
+        import shutil, tempfile
+        from pathlib import Path
+        from kb import governance, okf
+        tmp = Path(tempfile.mkdtemp())
+        shutil.copytree(CFG.bundle, tmp / "wiki")
+        notes = [n.rel for n in okf.notes(tmp / "wiki")][:2]
+        g = {"edges": [{"source": notes[0], "target": notes[1], "type": "applies", "origin": "extracted", "weight": 0.8, "evidence": "q"},
+                       {"source": notes[0], "target": "ext:x", "type": "mentions", "origin": "extracted"}]}
+        before = okf.read(tmp / "wiki" / notes[0], tmp / "wiki").frontmatter.get("verified")
+        added = governance.propose(tmp / "wiki", g)
+        self.assertEqual([(a[0], a[1], a[2]) for a in added], [(notes[0], "applies", notes[1])])
+        fm = okf.read(tmp / "wiki" / notes[0], tmp / "wiki").frontmatter
+        self.assertIn({"type": "applies", "target": "/" + notes[1]}, fm["relations"])
+        self.assertEqual(fm.get("verified"), before)
+        self.assertEqual(governance.propose(tmp / "wiki", g), [])  # idempotent
+        shutil.rmtree(tmp)
 
 
 if __name__ == "__main__":
