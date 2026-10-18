@@ -19,13 +19,15 @@ class NoteText:
     id: str          # bundle-relative note path
     title: str
     text: str        # body without frontmatter
+    description: str = ""
 
 
 @dataclass
 class Entity:
     label: str
-    type: str                                    # one of the ontology node types, or "Concept"
+    type: str                                    # Concept, Standard, Tool, Organization or Practice
     mentioned_in: list[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)  # other names merged into this one by entity resolution
 
 
 @dataclass
@@ -36,9 +38,21 @@ class Relation:
 
 
 @dataclass
+class NoteRelation:
+    """A typed relation between two notes, proposed by a model under the wiki's ontology. Never written to a note by
+    the build: it is published as a machine edge and offered to the owner as a frontmatter proposal."""
+    source: str      # note id
+    target: str      # note id
+    type: str        # one of the frontmatter relation types in ontology/edge-types.yaml
+    evidence: str    # a sentence quoted verbatim from the source note
+    confidence: float = 0.0
+
+
+@dataclass
 class Extraction:
     entities: list[Entity] = field(default_factory=list)
     relations: list[Relation] = field(default_factory=list)
+    note_relations: list[NoteRelation] = field(default_factory=list)
     extractor: str = "none"
     notes: list[str] = field(default_factory=list)   # warnings for the report
 

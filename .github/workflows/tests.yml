@@ -92,6 +92,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ matrix.ner == 'llm' && secrets.ANTHROPIC_API_KEY || '' }}
           SEMANTICA_PROVIDER: ${{ matrix.ner == 'llm' && 'anthropic' || '' }}
           SEMANTICA_MODEL: ${{ matrix.ner == 'llm' && 'claude-haiku-5-5' || '' }}
+          SEMANTICA_RELATIONS: ${{ matrix.ner == 'llm' && 'llm' || '' }}
       # A green build alone proves nothing: the graph falls back to the deterministic layer when Semantica cannot run.
       # Report what Semantica actually did (as an annotation, readable from the Checks API), and fail if it did not run.
       - name: Semantica actually ran
@@ -108,4 +109,32 @@ jobs:
           print(f"::notice title=semantica canary result::{sem.replace(chr(10), '%0A')[:3000]}%0A- Extracted edges in graph.json: {ext}%0A- Notes whose extraction failed: {failed}%0A- Most mentioned: {sample}"[:4000])
           ok = "Semantic layer skipped" not in sem and re.search(r"Extractor: semantica", sem) and failed < len(g["nodes"])
           sys.exit(0 if ok else 1)
+          PY
+      # What the llm pass produced, readable from the Checks API (run logs and artifacts are not reachable from every
+      # reviewing session): the resolved entities with their aliases, and every typed relation it proposes, as TSV.
+      - name: Resolved entities and proposed relations
+        if: matrix.ner == 'llm' && !cancelled()
+        run: |
+          python - <<'PY'
+          import json
+          g = json.load(open("dist/graph.json", encoding="utf-8"))
+          note = lambda title, body: print(f"::notice title={title}::" + body.replace("%", "%25").replace("\r", "").replace("\n", "%0A"))
+          ents = sorted((n for n in g["nodes"] if n["id"].startswith("ext:")), key=lambda n: (-n["degree"], n["label"].lower()))
+          lines = [f"{n['label']} [{n['type']}] x{n['degree']}" + (f" = {', '.join(n['aliases'])}" if n.get("aliases") else "") for n in ents]
+          rels = [e for e in g["edges"] if e["origin"] == "extracted" and e["type"] != "mentions"]
+          rows = ["\t".join([e["source"], e["type"], e["target"], str(e.get("weight", "")), e.get("evidence", "")]) for e in rels]
+          def chunks(items, size=3500):
+              out, cur = [], ""
+              for it in items:
+                  if len(cur) + len(it) + 1 > size:
+                      out.append(cur); cur = ""
+                  cur += it + "\n"
+              return out + ([cur] if cur else [])
+          for i, c in enumerate(chunks(lines)[:3]):
+              note(f"entities {i + 1}", c)
+          parts = chunks(rows)[:6]
+          for i, c in enumerate(parts):
+              note(f"relations {i + 1}/{len(parts)} ({len(rows)} total)", c)
+          if not rows:
+              note("relations 0/0 (0 total)", "no typed relations proposed")
           PY

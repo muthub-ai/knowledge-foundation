@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--by", required=True)
     s.add_argument("--at", required=True)
     s.add_argument("paths", nargs="+")
+    pr = sub.add_parser("propose", help="write the semantic layer's suggested relations into note frontmatter")
+    pr.add_argument("--graph", type=Path, required=True, help="a graph.json built with the relation pass")
+    pr.add_argument("--min-confidence", type=float, default=0.0)
     g = sub.add_parser("graph")
     g.add_argument("--out", type=Path, required=True)
     g.add_argument("--extractor", default="none")
@@ -86,6 +89,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "stamp":
         done = governance.stamp(bundle, [p.removeprefix(f"{bundle.name}/") for p in args.paths], by=args.by, at=args.at)
         print("\n".join(done) or "nothing to stamp")
+        return 0
+    if args.cmd == "propose":
+        import json as _json
+        added = governance.propose(bundle, _json.loads(args.graph.read_text(encoding="utf-8")), min_confidence=args.min_confidence)
+        print("\n".join("\t".join([s_, t_, d_, f"{c_:.2f}", ev_]) for s_, t_, d_, c_, ev_ in added) or "nothing to propose")
         return 0
     if args.cmd == "graph":
         g_, report = graph.build(bundle, cfg, get_extractor(args.extractor), revision=args.revision)

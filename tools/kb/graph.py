@@ -128,7 +128,10 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     report_lines: list[str] = []
     extraction = Extraction()
     if extractor is not None:
-        texts = [NoteText(n.rel, str(n.frontmatter.get("title") or ""), n.body) for n in notes]
+        texts = [NoteText(n.rel, str(n.frontmatter.get("title") or ""), n.body, " ".join(str(n.frontmatter.get("description") or "").split())[:240])
+                 for n in notes]
+        if hasattr(extractor, "known_pairs"):  # pairs the author connected: relation proposals go elsewhere
+            extractor.known_pairs = {frozenset((a, b)) for a, b, d in G.edges(data=True) if d["origin"] in ("frontmatter", "link")}
         try:
             extraction = extractor.extract(texts)
         except ExtractorUnavailable as e:
@@ -136,14 +139,26 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
         for ent in extraction.entities:
             target = aliases.get(ent.label.lower()) or f"ext:{_slug(ent.label)}"
             if not G.has_node(target):
-                G.add_node(target, type=ent.type, label=ent.label, url="", summary=f"Mentioned in {len(ent.mentioned_in)} note(s); no note yet",
+                also = f"; also called {', '.join(ent.aliases[:4])}" if ent.aliases else ""
+                G.add_node(target, type=ent.type, label=ent.label, url="", summary=f"Mentioned in {len(ent.mentioned_in)} note(s){also}; no note yet"[:300],
+                           aliases=list(ent.aliases),
                            trust="machine-confirmed", status="draft", tags=[],
                            # The newest mentioning note's date, not today's: graph.json stays the same between builds.
                            updated=max((G.nodes[m]["updated"] for m in ent.mentioned_in if m in G), default=_day(None)))
             for nid in ent.mentioned_in:
                 if not G.has_edge(nid, target):
                     edge(nid, target, "mentions", "extracted", f"ext:{extraction.extractor}")
+        # Typed relations between notes, proposed under the ontology. A pair already joined by a declared relation or a
+        # link keeps that edge: the machine never overrides what the author wrote.
+        proposals = []
+        for r in extraction.note_relations:
+            if r.source in note_ids and r.target in note_ids and not (G.has_edge(r.source, r.target) or G.has_edge(r.target, r.source)):
+                G.add_edge(r.source, r.target, type=r.type, origin="extracted", evidence=r.evidence[:300], weight=round(r.confidence, 2))
+                proposals.append(r)
         report_lines += [f"- Extractor note: {m}" for m in extraction.notes]
+        if extraction.note_relations:
+            report_lines.append(f"- Typed relations proposed: {len(proposals)} new (of {len(extraction.note_relations)} found; the rest repeat an existing edge)")
+            report_lines += [f"  - {r.source} {r.type} {r.target} ({r.confidence:.2f}): \"{r.evidence[:160]}\"" for r in proposals]
 
     G.remove_nodes_from([n for n, d in G.nodes(data=True) if d["type"] == "Theme" and G.degree(n) == 0])  # empty themes
     U = G.to_undirected()
@@ -155,7 +170,7 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     for node, data in G.nodes(data=True):
         x, y = pos.get(node, (0.0, 0.0))
         nodes.append({"id": node, **{k: data[k] for k in ("type", "label", "url", "summary", "trust", "status", "updated", "tags")},
-                      **{k: data[k] for k in ("canonical", "verified", "stale_after", "source_date") if data.get(k)},
+                      **{k: data[k] for k in ("canonical", "verified", "stale_after", "source_date", "aliases") if data.get(k)},
                       "degree": int(U.degree(node)), "community": int(community_of.get(node, 0)),
                       "x": round(float(x) * 1000, 2), "y": round(float(y) * 1000, 2)})
     edges = [{"source": s, "target": t, **{k: d[k] for k in ("type", "origin", "evidence", "weight")}} for s, t, d in G.edges(data=True)]
