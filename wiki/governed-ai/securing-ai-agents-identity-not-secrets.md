@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/securing-ai-agents-identity-not-secr
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /governed-ai/model-is-a-tool-harness-is-the-strategy.md
 ---
 
 # Overview

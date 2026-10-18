@@ -27,6 +27,9 @@ canonical_essay: https://muthub.org/writing/python-or-jvm-for-enterprise-ai
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /data-ai-platforms/from-mlops-to-ai-engineering-what-industrializing-ml-still.md
 ---
 
 # Overview

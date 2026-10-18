@@ -23,6 +23,9 @@ canonical_essay: https://muthub.org/writing/spec-kit-beyond-vibe-coding
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /ai-native-sdlc/spec-driven-development-for-regulated-industries-audit-the.md
 ---
 
 # Overview

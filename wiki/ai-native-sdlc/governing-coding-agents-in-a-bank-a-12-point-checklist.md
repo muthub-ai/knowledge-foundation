@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/playbooks/governing-coding-agents
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: applies
+  target: /ai-native-sdlc/spec-driven-development-for-regulated-industries-audit-the.md
 ---
 
 # Overview

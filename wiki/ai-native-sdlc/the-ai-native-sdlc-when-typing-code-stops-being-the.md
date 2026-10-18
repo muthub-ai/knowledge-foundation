@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/the-ai-native-sdlc
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /context-engineering/the-cost-of-unmanaged-context.md
 ---
 
 # Overview

@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/if-you-cant-prove-why-an-ai-wrote-it
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /context-engineering/self-describing-knowledge-why-the-open-knowledge-format.md
 ---
 
 # Overview

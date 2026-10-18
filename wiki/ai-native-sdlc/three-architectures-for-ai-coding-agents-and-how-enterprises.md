@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/three-architectures-for-ai-coding-ag
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /governed-ai/architecture-that-runs-why-ai-era-governance-must-be-code.md
 ---
 
 # Overview

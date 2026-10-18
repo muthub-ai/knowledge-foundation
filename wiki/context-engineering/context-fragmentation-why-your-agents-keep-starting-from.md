@@ -24,6 +24,8 @@ canonical_essay: https://muthub.org/writing/context-fragmentation
 relations:
 - type: builds_on
   target: /context-engineering/the-cost-of-unmanaged-context.md
+- type: builds_on
+  target: /data-ai-platforms/capture-the-why-the-knowledge-layer-enterprise-agents-are.md
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'

@@ -24,6 +24,9 @@ canonical_essay: https://muthub.org/writing/model-is-a-tool-harness-is-the-strat
 verified:
   by: human:muthu
   at: '2026-10-18T02:01:22Z'
+relations:
+- type: builds_on
+  target: /ai-native-sdlc/the-ai-native-sdlc-when-typing-code-stops-being-the.md
 ---
 
 # Overview
