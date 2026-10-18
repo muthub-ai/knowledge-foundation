@@ -53,8 +53,10 @@ def evidence_in(evidence: str, text: str) -> bool:
     return len(e) >= MIN_EVIDENCE and e in _squash(text)
 
 
-def candidates(notes: list[NoteText], entities: list[Entity]) -> dict[str, list[str]]:
-    """For each note, the other notes that share the most resolved entities with it (at most MAX_CANDIDATES)."""
+def candidates(notes: list[NoteText], entities: list[Entity], known: set[frozenset[str]] | None = None) -> dict[str, list[str]]:
+    """For each note, the other notes that share the most resolved entities with it (at most MAX_CANDIDATES), leaving out
+    notes the author already connected it to: the model's few proposals go to pairs nobody has linked."""
+    known = known or set()
     ents_of: dict[str, set[str]] = {n.id: set() for n in notes}
     for e in entities:
         for m in e.mentioned_in:
@@ -62,7 +64,8 @@ def candidates(notes: list[NoteText], entities: list[Entity]) -> dict[str, list[
     out: dict[str, list[str]] = {}
     for n in notes:
         mine = ents_of.get(n.id, set())
-        scored = sorted(((len(mine & ents_of[o.id]), o.id) for o in notes if o.id != n.id and mine & ents_of[o.id]),
+        scored = sorted(((len(mine & ents_of[o.id]), o.id) for o in notes
+                         if o.id != n.id and mine & ents_of[o.id] and frozenset((n.id, o.id)) not in known),
                         key=lambda t: (-t[0], t[1]))
         out[n.id] = [oid for _, oid in scored[:MAX_CANDIDATES]]
     return out
@@ -80,7 +83,8 @@ Rules:
 - Propose a relation only when the note's own text makes it explicit or unmistakable. Sharing a topic is not a relation.
 - At most 3 relations. Zero is a good answer.
 - "evidence" must be one sentence copied word for word from the note text (not from a candidate), at least 6 words.
-- "confidence" is your probability (0 to 1) that a careful human editor would accept the relation.
+- "confidence": 0.9 when the note states the relation outright (it names the candidate's idea and says how it uses,
+  extends, narrows or disputes it); 0.75 when it is clearly implied by what the note argues; leave out anything weaker.
 
 Return JSON only: {{"relations": [{{"target": "C1", "type": "applies", "evidence": "...", "confidence": 0.8}}]}}
 
@@ -100,9 +104,10 @@ def _parse_relations(raw: Any) -> list[dict[str, Any]]:
 
 
 def extract_note_relations(notes: list[NoteText], entities: list[Entity], ask: Ask,
-                           log: Callable[[str], None] | None = None) -> list[NoteRelation]:
+                           log: Callable[[str], None] | None = None, known: set[frozenset[str]] | None = None) -> list[NoteRelation]:
     by_id = {n.id: n for n in notes}
-    cands = candidates(notes, entities)
+    cands = candidates(notes, entities, known)
+    confidences: list[float] = []
     out: list[NoteRelation] = []
     dropped = {"type": 0, "target": 0, "evidence": 0, "confidence": 0, "failed": 0}
     for n in notes:
@@ -128,6 +133,7 @@ def extract_note_relations(notes: list[NoteText], entities: list[Entity], ask: A
                 conf = float(r.get("confidence", 0))
             except (TypeError, ValueError):
                 conf = 0.0
+            confidences.append(conf)
             if typ not in RELATION_TYPES:
                 dropped["type"] += 1
             elif not 0 <= idx < len(cs):
@@ -139,6 +145,8 @@ def extract_note_relations(notes: list[NoteText], entities: list[Entity], ask: A
             elif (cs[idx].id, typ) not in seen:
                 seen.add((cs[idx].id, typ))
                 out.append(NoteRelation(n.id, cs[idx].id, typ, ev, round(conf, 2)))
+    if log and confidences:
+        log("relation confidences returned: " + ", ".join(f"{c:.2f}" for c in sorted(confidences, reverse=True)[:30]))
     if log:
         log(f"typed relations: {len(out)} kept; dropped " + ", ".join(f"{v} {k}" for k, v in dropped.items() if v)
             if any(dropped.values()) else f"typed relations: {len(out)} kept, none dropped")

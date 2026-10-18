@@ -108,7 +108,8 @@ class AdapterTests(unittest.TestCase):
         builder.build.side_effect = [
             {"entities": [{"text": "MCP", "type": "PROTOCOL"}, {"text": "Ada Lovelace", "type": "PERSON"},
                           {"text": "spec-driven development", "type": "METHODOLOGY"}, {"text": "Anthropic", "type": "COMPANY"}]},
-            {"entities": [{"text": "Model Context Protocol", "type": "STANDARD"}, {"text": "Last summer", "type": "DATE"}]},
+            {"entities": [{"text": "Model Context Protocol", "type": "STANDARD"}, {"text": "Last summer", "type": "DATE"},
+                          {"text": "Spec-driven development", "type": "METHOD"}, {"text": "code", "type": "CONCEPT"}]},
             {"entities": []},
         ]
         ask = mock.Mock(side_effect=lambda p: {"groups": []} if "Group the names" in p else {"relations": []})
@@ -120,6 +121,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(by["Model Context Protocol"].type, "Standard")
         self.assertEqual(by["Model Context Protocol"].aliases, ["MCP"])
         self.assertEqual(by["spec-driven development"].type, "Practice")
+        self.assertNotIn("code", by)  # a generic word, not an entity
         self.assertEqual(by["Anthropic"].type, "Organization")
         self.assertEqual(builder.build.call_args.kwargs["entity_types"], ["Concept", "Standard", "Tool", "Organization", "Practice"])
         self.assertTrue(any("typed relations" in n for n in out.notes))

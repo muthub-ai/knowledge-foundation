@@ -130,6 +130,8 @@ def build(bundle: Path, cfg: Config, extractor: Extractor | None = None, *, revi
     if extractor is not None:
         texts = [NoteText(n.rel, str(n.frontmatter.get("title") or ""), n.body, " ".join(str(n.frontmatter.get("description") or "").split())[:240])
                  for n in notes]
+        if hasattr(extractor, "known_pairs"):  # pairs the author connected: relation proposals go elsewhere
+            extractor.known_pairs = {frozenset((a, b)) for a, b, d in G.edges(data=True) if d["origin"] in ("frontmatter", "link")}
         try:
             extraction = extractor.extract(texts)
         except ExtractorUnavailable as e:

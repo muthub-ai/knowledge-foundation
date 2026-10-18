@@ -64,13 +64,42 @@ def _headings(text: str) -> set[str]:
     return {m.group(1).strip().lower() for m in re.finditer(r"^#{1,6}\s+(.+?)\s*#*$", text, flags=re.M)}
 
 
-def _is_entity(label: str, note: NoteText, headings: set[str]) -> bool:
+# Generic words the model returns as "concepts" when asked for typed entities (canary, October 18, 2026). A wiki
+# entity is a named thing or a term of art, not an everyday noun.
+_GENERIC = {"code", "systems", "system", "standards", "tests", "test", "production", "knowledge", "enterprise", "prompts",
+            "resources", "schemas", "tools", "tool", "platform", "models", "model", "data", "teams", "use cases", "decisions",
+            "controls", "policy", "reviews", "incidents", "tickets", "commits", "chat", "calendar", "editors", "clarity",
+            "fluency", "influence", "authority", "maturity", "autonomy", "security", "simplicity", "analytics", "application",
+            "compute", "metadata", "portfolio", "licenses", "license costs", "rewrite", "paydown", "pilots", "lifecycle",
+            "reinforcement", "personal growth", "firefighting", "distill", "bank", "architecture", "documentation"}
+_PHRASE = re.compile(r"(the|a|an|our|my|your|how|why|what|when)\s+\S+\s+\S+.*", re.I)
+
+
+def _is_entity(label: str, note: NoteText, headings: set[str], titles: frozenset[str] = frozenset()) -> bool:
     # Pattern matching also returns spans that run from a heading into the next paragraph: an entity is one short line.
-    if "\n" in label or len(label) > 60 or len(label.split()) > 6:
+    if "\n" in label or len(label) > 60 or len(label.split()) > 6 or "://" in label:
         return False
     low = label.lower()
     return (len(label) >= 3 and low != note.title.lower() and low not in _NOT_ENTITIES and low not in headings
+            and low not in _GENERIC and low not in titles and not _PHRASE.fullmatch(label)
             and not _NUMBERISH.fullmatch(label) and not _NOISE.fullmatch(label))
+
+
+def _titles(notes: list[NoteText]) -> frozenset[str]:
+    """Every note's title, and the part before its colon: a note named as an entity is the note, not an entity."""
+    out = set()
+    for n in notes:
+        t = n.title.strip().lower()
+        out |= {t, t.split(":")[0].strip()}
+    return frozenset(x for x in out if x)
+
+
+def _keep(e: Entity) -> bool:
+    """Publish an entity that connects notes (two or more), or a named standard, tool or organisation (capitalised)
+    even when one note mentions it. A one-off generic concept adds a dot, not knowledge."""
+    from .resolution import is_acronym
+    return (len(e.mentioned_in) >= 2 or is_acronym(e.label)
+            or (e.type in ("Standard", "Tool", "Organization") and any(c.isupper() for c in e.label)))
 
 
 def _patch_anthropic_provider() -> None:
@@ -158,6 +187,7 @@ class SemanticaExtractor:
         self._builder = builder    # all three injectable for tests
         self._resolver = resolver  # Semantica's EntityResolver.resolve_entities
         self._ask = ask            # prompt -> parsed JSON, through Semantica's provider
+        self.known_pairs: set[frozenset[str]] = set()  # note pairs the author already connected (set by kb graph)
 
     def extract(self, notes: list[NoteText]) -> Extraction:
         builder = self._builder or _load_builder()
@@ -171,6 +201,7 @@ class SemanticaExtractor:
         extra: dict[str, Any] = {"merge_strategy": "union"} if ner != "pattern" else {}
         if ner == "llm":
             extra["entity_types"] = ENTITY_TYPES
+        titles = _titles(notes)
         warnings = _Warnings()
         logging.getLogger("semantica").addHandler(warnings)
         started, slowest = time.monotonic(), (0.0, "")
@@ -188,7 +219,7 @@ class SemanticaExtractor:
                 print(f"semantica {ner}: {note.id} in {took:.1f}s", flush=True)
             for e in (kg or {}).get("entities", []) or []:
                 label = _label(e)
-                if not _is_entity(label, note, headings) or _raw_type(e) in _EXCLUDED_TYPES:
+                if not _is_entity(label, note, headings, titles) or _raw_type(e) in _EXCLUDED_TYPES:
                     continue
                 ent = by_label.setdefault(label.lower(), Entity(label=label, type=_etype(e)))
                 if note.id not in ent.mentioned_in:
@@ -203,11 +234,13 @@ class SemanticaExtractor:
         log = out.notes.append
         want_relations = os.environ.get("SEMANTICA_RELATIONS", "") == "llm"
         ask = self._ask or (_provider_ask() if want_relations else None)
-        out.entities = resolve(list(by_label.values()), fuzzy=self._resolver or _fuzzy_resolver(),
-                               alias_groups=rels.alias_groups_with(ask) if ask else None, log=log)
+        resolved = resolve(list(by_label.values()), fuzzy=self._resolver or _fuzzy_resolver(),
+                           alias_groups=rels.alias_groups_with(ask) if ask else None, log=log)
+        out.entities = [e for e in resolved if _keep(e)]
+        log(f"kept {len(out.entities)} of {len(resolved)} resolved entities (two or more notes, or a named standard, tool or organisation)")
         if want_relations and ask:
             t0 = time.monotonic()
-            out.note_relations = rels.extract_note_relations(notes, out.entities, ask, log=log)
+            out.note_relations = rels.extract_note_relations(notes, out.entities, ask, log=log, known=self.known_pairs)
             log(f"relation pass: {time.monotonic() - t0:.0f}s")
         return out
 
